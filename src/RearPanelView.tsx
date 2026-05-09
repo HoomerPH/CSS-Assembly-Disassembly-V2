@@ -679,7 +679,7 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               targetEnd={{ x: 523, y: 152 }}
               connectedControlPoints={[{ x: 250, y: 300 }, { x: 523, y: 250 }]}
               disconnectedControlPoints={[{ x: 250, y: 350 }, { x: 400, y: 250 }]}
-              color="#f59e0b" glowId="glowPower" width={4}
+              color="#ffffff" glowId="glowPower" width={4}
               isConnected={connections.pcPower}
               isDragging={dragging === 'pcPower'}
               dragPos={dragPos}
