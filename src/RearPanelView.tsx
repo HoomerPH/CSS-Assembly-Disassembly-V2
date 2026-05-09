@@ -314,6 +314,18 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
     }
   };
 
+  const getTooltipContent = (id: string) => {
+    switch (id) {
+      case 'avrPower': return { name: 'AVR Power Connection', desc: 'Supply electricity from the wall outlet to the Automatic Voltage Regulator.' };
+      case 'pcPower': return { name: 'PC Power Connection', desc: 'Connect the ATX Power Supply Unit (PSU) to the AVR.' };
+      case 'monitorPower': return { name: 'Monitor Power Connection', desc: 'Connect the Display to the AVR so it receives safe power.' };
+      case 'display': return { name: 'Display Output Connection', desc: 'Route the HDMI signal from the GPU to the monitor.' };
+      case 'keyboard': return { name: 'Keyboard Data Connection', desc: 'Hardwire to the Rear I/O USB ports for minimal input latency.' };
+      case 'mouse': return { name: 'Mouse Data Connection', desc: 'Connect straight to the Rear I/O for precise cursor movement.' };
+      default: return { name: 'Cable', desc: 'Connects peripherals' };
+    }
+  };
+
   const isComplete = mode === 'assembly' 
     ? Object.values(connections).every(Boolean)
     : Object.values(connections).every(val => !val);
@@ -760,22 +772,36 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
             />
           </g>
 
+          {/* Tooltip for dragging item */}
+          <AnimatePresence>
+            {dragging && (
+              <motion.g
+                key="drag-tooltip"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, x: dragPos.x + 80, y: dragPos.y }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                style={{ pointerEvents: 'none' }}
+              >
+                <foreignObject x="18" y="-35" width="200" height="100">
+                  <div className="bg-[#020617] border-2 border-[#334155] rounded-md p-2 text-slate-100 flex flex-col shadow-xl">
+                    <div className="text-xs font-bold mb-1">
+                      {getTooltipContent(dragging).name}
+                    </div>
+                    <div className="text-[10px] leading-tight text-slate-400">
+                      {getTooltipContent(dragging).desc}
+                    </div>
+                  </div>
+                </foreignObject>
+                {/* Tooltip Arrow */}
+                <polygon points="12,-6 12,6 6,0" fill="#334155" />
+                <polygon points="17,-4 17,4 10,0" fill="#020617" />
+              </motion.g>
+            )}
+          </AnimatePresence>
+
         </svg>
 
-        {/* Informational popup when dragging cables */}
-        {dragging && (
-          <div className="absolute top-10 left-1/2 -translate-x-1/2 p-4 bg-[#0c0c0e]/95 backdrop-blur-xl rounded-md border border-[#3b82f6]/40 shadow-[0_0_20px_rgba(59,130,246,0.15)] pointer-events-none z-50 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-200">
-            <Info className="w-5 h-5 text-[#3b82f6]" />
-            <div className="font-sans text-sm text-[#eee] max-w-sm leading-relaxed">
-              {dragging === 'avrPower' && <span><strong>AVR Power Connection:</strong> Supply electricity from the wall outlet to the Automatic Voltage Regulator to protect your setup from power surges.</span>}
-              {dragging === 'pcPower' && <span><strong>PC Power Connection:</strong> Connect the ATX Power Supply Unit (PSU) to the safe, regulated power outlet of the AVR.</span>}
-              {dragging === 'monitorPower' && <span><strong>Monitor Power Connection:</strong> Connect the Display to the AVR so it receives safe power.</span>}
-              {dragging === 'display' && <span><strong>Display Output Connection:</strong> Route the high-bandwidth HDMI signal from the dedicated Graphics Processing Unit (GPU) to the monitor.</span>}
-              {dragging === 'keyboard' && <span><strong>Keyboard Data Connection:</strong> Hardwire the peripheral to the Motherboard's Rear I/O USB ports for minimal input latency.</span>}
-              {dragging === 'mouse' && <span><strong>Mouse Data Connection:</strong> Connect the mouse sensor data straight to the Motherboard's Rear I/O for precise cursor movement.</span>}
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Footer */}

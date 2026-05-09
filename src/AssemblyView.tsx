@@ -69,7 +69,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
     } else {
       if (id === 'cpu' && installed['cpuFan']) {
         setWarningMessage('The CPU Cooler must be removed before the CPU.');
-        return; 
+        return;
       }
       if (id === 'psu' && (cables.eps || cables.atx)) {
         setWarningMessage('Please disconnect the 4-pin and 24-pin cables before removing the Power Supply.');
@@ -154,6 +154,22 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
     }
     const comp = PC_COMPONENTS.find(c => c.id === id);
     return { name: comp?.name || '', desc: comp?.description || '' };
+  };
+
+  const isRemovable = (id: string) => {
+    if (mode !== 'disassembly') return false;
+    
+    if (id === 'cable-eps') return cables.eps;
+    if (id === 'cable-atx') return cables.atx;
+    if (id === 'cable-sata') return cables.sata;
+
+    if (!installed[id as keyof typeof installed]) return false;
+
+    if (id === 'cpu') return !installed['cpuFan'];
+    if (id === 'psu') return !cables.eps && !cables.atx;
+    if (id === 'hdd') return !cables.sata;
+    
+    return true;
   };
 
   if (powerOnStage === 'post' || powerOnStage === 'os') {
@@ -248,71 +264,197 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
             {/* Motherboard (Standard ATX approx 305x244mm scaled) */}
             <g transform="translate(350, 150)">
-              <rect x="0" y="0" width="450" height="550" fill="#0c0c0e" rx="4" />
-              {/* Motherboard Trace Patterns (decorative) */}
-              <path d="M 20 20 L 50 50 L 50 100 M 430 530 L 400 500 L 350 500" fill="none" stroke="#1f1f23" strokeWidth="2" />
-              <rect x="0" y="0" width="450" height="550" fill="none" stroke="#333" strokeWidth="2" rx="4" />
-              <text x="225" y="530" fill="#333" fontSize="20" fontFamily="monospace" textAnchor="middle" fontWeight="bold">MOTHERBOARD (ATX)</text>
+              {/* Main PCB Base */}
+              <rect x="0" y="0" width="450" height="550" fill="#08080a" rx="4" />
+
+              {/* PCB Trace Patterns (More Realistic) */}
+              <path d="M 20 180 L 100 180 L 120 200 L 120 300 M 430 450 L 350 450 L 330 430 L 330 350" fill="none" stroke="#1c1c22" strokeWidth="2" />
+              <path d="M 20 190 L 100 190 L 120 210 L 120 310 M 430 460 L 350 460 L 330 440 L 330 360" fill="none" stroke="#1c1c22" strokeWidth="2" />
+              <path d="M 20 200 L 100 200 L 120 220 L 120 320 M 430 470 L 350 470 L 330 450 L 330 370" fill="none" stroke="#1c1c22" strokeWidth="2" />
+              <path d="M 250 500 L 250 520 M 260 500 L 260 520 M 270 500 L 270 520 M 280 500 L 280 520" fill="none" stroke="#1c1c22" strokeWidth="1" />
+              <path d="M 200 120 L 200 140 M 210 120 L 210 140 M 220 120 L 220 140 M 230 120 L 230 140" fill="none" stroke="#1c1c22" strokeWidth="1" />
+
+              {/* Gold Accents (Audio Path & Branding) */}
+              <path d="M 0 350 Q 50 350 50 450 T 0 500" fill="none" stroke="#b45309" strokeWidth="1" strokeDasharray="4 2" />
+              <text x="25" y="450" fill="#b45309" fontSize="10" fontFamily="sans-serif" textAnchor="middle" transform="rotate(-90 25 450)" fontWeight="bold">AUDIO BOOST</text>
+
+              <rect x="0" y="0" width="450" height="550" fill="none" stroke="#222" strokeWidth="3" rx="4" />
+              <text x="225" y="535" fill="#333" fontSize="24" fontFamily="monospace" textAnchor="middle" fontWeight="bold">MOTHERBOARD (ATX)</text>
+
+              {/* Mounting Holes with Silver Rings */}
+              {[
+                [20, 20], [225, 20], [430, 20],
+                [20, 275], [225, 275], [430, 275],
+                [20, 530], [225, 530], [430, 530]
+              ].map(([cx, cy], i) => (
+                <g key={`hole-${i}`}>
+                  <circle cx={cx} cy={cy} r="6" fill="silver" />
+                  <circle cx={cx} cy={cy} r="4" fill="#080809" />
+                  <circle cx={cx} cy={cy} r="6" fill="none" stroke="#9ca3af" strokeWidth="2" strokeDasharray="1 3" />
+                </g>
+              ))}
+
+              {/* VRM Heatsinks & Capacitors */}
+              {/* Top VRM */}
+              <rect x="140" y="15" width="140" height="25" fill="#18181b" stroke="#333" rx="2" />
+              {Array.from({ length: 13 }).map((_, i) => <line key={`vrmt-${i}`} x1={145 + i * 10} y1="15" x2={145 + i * 10} y2="40" stroke="#27272a" strokeWidth="3" />)}
+              {/* Left VRM */}
+              <rect x="90" y="60" width="30" height="120" fill="#18181b" stroke="#333" rx="2" />
+              {Array.from({ length: 11 }).map((_, i) => <line key={`vrml-${i}`} x1="90" y1={65 + i * 10} x2="120" y2={65 + i * 10} stroke="#27272a" strokeWidth="3" />)}
+
+              {/* CPU Capacitors */}
+              {Array.from({ length: 8 }).map((_, i) => (
+                <g key={`cap-${i}`} transform={`translate(135, ${65 + i * 12})`}>
+                  <circle cx="0" cy="0" r="4" fill="#9ca3af" stroke="#4b5563" />
+                  <path d="M-4,0 A4,4 0 0,0 4,0" fill="#facc15" />
+                </g>
+              ))}
 
               {/* Rear I/O Shield */}
-              <rect x="-10" y="50" width="10" height="180" fill="#444" rx="1" />
+              <rect x="-10" y="50" width="10" height="180" fill="#9ca3af" stroke="#4b5563" strokeWidth="2" rx="1" />
+              <rect x="-5" y="60" width="5" height="15" fill="#111" />
+              <rect x="-5" y="85" width="5" height="15" fill="#111" />
+              <rect x="-5" y="110" width="5" height="15" fill="#111" />
+              <rect x="-5" y="140" width="5" height="40" fill="#111" />
 
-              {/* CPU Socket Area */}
-              <rect x="160" y="60" width="100" height="100" fill={draggingId === 'cpu' || draggingId === 'cpuFan' ? 'rgba(59,130,246,0.1)' : '#141415'} stroke={draggingId === 'cpu' || draggingId === 'cpuFan' ? '#3b82f6' : '#333'} strokeWidth="2" rx="2" className={draggingId === 'cpu' || draggingId === 'cpuFan' ? 'animate-pulse' : ''} />
-              <rect x="165" y="65" width="90" height="90" fill="none" stroke="#444" strokeDasharray="2 2" />
-              <text x="210" y="50" fill="#666" fontSize="10" fontFamily="sans-serif" textAnchor="middle">CPU SOCKET (LGA)</text>
+              {/* CPU Socket Area (LGA Detail) */}
+              <g transform="translate(160, 60)">
+                <rect x="0" y="0" width="100" height="100" fill={draggingId === 'cpu' || draggingId === 'cpuFan' ? 'rgba(59,130,246,0.1)' : '#18181b'} stroke={draggingId === 'cpu' || draggingId === 'cpuFan' ? '#3b82f6' : '#27272a'} strokeWidth="3" rx="4" className={draggingId === 'cpu' || draggingId === 'cpuFan' ? 'animate-pulse' : ''} />
+                <rect x="5" y="5" width="90" height="90" fill="#000" stroke="#333" strokeWidth="2" rx="2" />
+                <rect x="15" y="15" width="70" height="70" fill="none" stroke="#666" strokeDasharray="1 1" />
+                {/* Retention Arm */}
+                <path d="M 105 10 L 115 10 L 115 90 L 100 90" fill="none" stroke="#d1d5db" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="115" cy="10" r="2" fill="#d1d5db" />
+                <circle cx="100" cy="90" r="2" fill="#d1d5db" />
+              </g>
+              <text x="210" y="45" fill="#9ca3af" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">LGA 1700</text>
 
               {/* 4/8-pin CPU Power Connector */}
-              <rect x="100" y="20" width="30" height="15" fill={draggingId === 'cable-eps' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'cable-eps' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-eps' ? 'animate-pulse' : ''} />
-              <circle cx="105" cy="27" r="2" fill="#000" /><circle cx="115" cy="27" r="2" fill="#000" /><circle cx="125" cy="27" r="2" fill="#000" />
-              <text x="115" y="15" fill="#666" fontSize="8" fontFamily="sans-serif" textAnchor="middle">4-PIN EPS</text>
+              <g transform="translate(100, 20)">
+                <rect x="0" y="0" width="30" height="15" fill={draggingId === 'cable-eps' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'cable-eps' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-eps' ? 'animate-pulse' : ''} />
+                <rect x="2" y="2" width="12" height="11" fill="#000" rx="1" />
+                <rect x="16" y="2" width="12" height="11" fill="#000" rx="1" />
+                <circle cx="8" cy="7.5" r="2" fill="#f87171" />
+                <circle cx="22" cy="7.5" r="2" fill="#f87171" />
+                <path d="M 10 -2 L 20 -2 L 20 0 L 10 0 Z" fill="#444" /> {/* Clip */}
+              </g>
+              <text x="115" y="12" fill="#9ca3af" fontSize="8" fontFamily="sans-serif" textAnchor="middle">4-PIN EPS</text>
 
               {/* RAM Slots (DIMM) */}
-              <g transform="translate(300, 60)">
-                <rect x="0" y="0" width="10" height="130" fill={draggingId === 'ram1' ? 'rgba(59,130,246,0.2)' : '#111'} stroke={draggingId === 'ram1' ? '#3b82f6' : '#333'} rx="1" className={draggingId === 'ram1' ? 'animate-pulse' : ''} />
-                <rect x="20" y="0" width="10" height="130" fill={draggingId === 'ram2' ? 'rgba(59,130,246,0.2)' : '#111'} stroke={draggingId === 'ram2' ? '#3b82f6' : '#333'} rx="1" className={draggingId === 'ram2' ? 'animate-pulse' : ''} />
-                <text x="15" y="-10" fill="#666" fontSize="10" fontFamily="sans-serif" textAnchor="middle">DDR4/5 DIMM SLOTS</text>
+              <g transform="translate(300, 50)">
+                <rect x="0" y="0" width="12" height="140" fill={draggingId === 'ram1' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'ram1' ? '#3b82f6' : '#27272a'} rx="1" className={draggingId === 'ram1' ? 'animate-pulse' : ''} />
+                <rect x="25" y="0" width="12" height="140" fill={draggingId === 'ram2' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'ram2' ? '#3b82f6' : '#27272a'} rx="1" className={draggingId === 'ram2' ? 'animate-pulse' : ''} />
+                {/* Channel A / Channel B colored slots */}
+                <rect x="2" y="5" width="8" height="130" fill="#0a0a0b" />
+                <rect x="27" y="5" width="8" height="130" fill="#0a0a0b" />
+                {/* Clips */}
+                <path d="M -2 0 L 14 0 M 23 0 L 39 0 M -2 140 L 14 140 M 23 140 L 39 140" stroke="#d1d5db" strokeWidth="2" />
+                <line x1="2" y1="85" x2="10" y2="85" stroke="#facc15" strokeWidth="2" /> {/* Key */}
+                <line x1="27" y1="85" x2="35" y2="85" stroke="#facc15" strokeWidth="2" /> {/* Key */}
+                <text x="18.5" y="-10" fill="#9ca3af" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">DDR5 DIMM</text>
               </g>
 
               {/* 24-pin ATX Power Connector */}
-              <rect x="400" y="200" width="20" height="80" fill={draggingId === 'cable-atx' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'cable-atx' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-atx' ? 'animate-pulse' : ''} />
-              <text x="410" y="190" fill="#666" fontSize="8" fontFamily="sans-serif" textAnchor="middle">24-PIN ATX</text>
+              <g transform="translate(400, 200)">
+                <rect x="0" y="0" width="20" height="80" fill={draggingId === 'cable-atx' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'cable-atx' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-atx' ? 'animate-pulse' : ''} />
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <rect key={`atx1-${i}`} x="2" y={2 + i * 6.5} width="7" height="4.5" fill="#000" rx="0.5" />
+                ))}
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <rect key={`atx2-${i}`} x="11" y={2 + i * 6.5} width="7" height="4.5" fill="#000" rx="0.5" />
+                ))}
+                <path d="M 20 30 L 23 30 L 23 50 L 20 50 Z" fill="#444" /> {/* Clip */}
+              </g>
+              <text x="410" y="190" fill="#9ca3af" fontSize="8" fontFamily="sans-serif" textAnchor="middle">24-PIN ATX</text>
 
               {/* M.2 NVMe Slot(s) */}
-              <rect x="180" y="190" width="90" height="15" fill={draggingId === 'nvme' ? 'rgba(59,130,246,0.2)' : '#111'} stroke={draggingId === 'nvme' ? '#3b82f6' : '#333'} rx="1" className={draggingId === 'nvme' ? 'animate-pulse' : ''} />
-              <rect x="175" y="190" width="10" height="15" fill="#444" rx="1" /> {/* M.2 connector */}
-              <text x="225" y="185" fill="#666" fontSize="10" fontFamily="sans-serif" textAnchor="middle">M.2 PCIe 4.0 x4</text>
+              <g transform="translate(180, 190)">
+                <rect x="0" y="0" width="90" height="15" fill={draggingId === 'nvme' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'nvme' ? '#3b82f6' : '#27272a'} rx="1" className={draggingId === 'nvme' ? 'animate-pulse' : ''} />
+                <rect x="-5" y="0" width="10" height="15" fill="#111" rx="1" stroke="#333" /> {/* M.2 connector */}
+                {/* Stand-offs */}
+                <circle cx="30" cy="7.5" r="2" fill="#d1d5db" />
+                <circle cx="50" cy="7.5" r="2" fill="#d1d5db" />
+                <circle cx="85" cy="7.5" r="3" fill="#d1d5db" stroke="#9ca3af" /> {/* Primary standoff */}
+              </g>
+              <text x="225" y="185" fill="#9ca3af" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">M.2 PCIe 4.0 x4</text>
 
               {/* PCIe x16 Slot (GPU) */}
-              <rect x="80" y="370" width="260" height="15" fill={draggingId === 'gpu' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'gpu' ? '#3b82f6' : '#555'} strokeWidth="2" rx="2" className={draggingId === 'gpu' ? 'animate-pulse' : ''} />
-              <text x="210" y="360" fill="#666" fontSize="10" fontFamily="sans-serif" textAnchor="middle">PCIe x16 (GPU)</text>
+              <g transform="translate(80, 370)">
+                <rect x="0" y="0" width="260" height="15" fill={draggingId === 'gpu' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'gpu' ? '#3b82f6' : '#27272a'} strokeWidth="2" rx="2" className={draggingId === 'gpu' ? 'animate-pulse' : ''} />
+                <rect x="0" y="-1" width="260" height="17" fill="none" stroke="#d1d5db" strokeWidth="1" rx="2" /> {/* Steel armor */}
+                <rect x="2" y="2" width="60" height="11" fill="#000" />
+                <rect x="64" y="2" width="194" height="11" fill="#000" />
+                {/* PCIe Retention Clip */}
+                <path d="M 260 2 L 270 2 L 275 7.5 L 270 13 L 260 13 Z" fill="#444" stroke="#222" />
+              </g>
+              <text x="210" y="360" fill="#9ca3af" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">PCIe 4.0 x16 (STEEL ARMOR)</text>
 
               {/* PCIe x1 Slot */}
-              <rect x="80" y="420" width="100" height="10" fill="#1f1f23" stroke="#444" rx="1" />
+              <rect x="80" y="420" width="100" height="10" fill="#18181b" stroke="#27272a" rx="1" />
+              <rect x="82" y="422" width="20" height="6" fill="#000" />
+              <rect x="104" y="422" width="74" height="6" fill="#000" />
 
               {/* SATA Ports */}
               <g transform="translate(410, 420)">
-                <rect x="0" y="0" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(59,130,246,0.2)' : '#111'} stroke={draggingId === 'cable-sata' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-sata' ? 'animate-pulse' : ''} />
-                <rect x="0" y="15" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(59,130,246,0.2)' : '#111'} stroke={draggingId === 'cable-sata' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-sata' ? 'animate-pulse' : ''} />
-                <rect x="20" y="0" width="15" height="10" fill="#111" stroke="#444" rx="1" /><rect x="20" y="15" width="15" height="10" fill="#111" stroke="#444" rx="1" />
-                <text x="17" y="-8" fill="#666" fontSize="8" fontFamily="sans-serif" textAnchor="middle">SATA III</text>
+                <rect x="0" y="0" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'cable-sata' ? '#3b82f6' : '#333'} rx="1" className={draggingId === 'cable-sata' ? 'animate-pulse' : ''} />
+                <rect x="0" y="15" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'cable-sata' ? '#3b82f6' : '#333'} rx="1" className={draggingId === 'cable-sata' ? 'animate-pulse' : ''} />
+                <rect x="20" y="0" width="15" height="10" fill="#18181b" stroke="#333" rx="1" />
+                <rect x="20" y="15" width="15" height="10" fill="#18181b" stroke="#333" rx="1" />
+                {/* L-Shape connectors inside */}
+                <path d="M 12 3 L 12 7 L 3 7" fill="none" stroke="#000" strokeWidth="2" />
+                <path d="M 12 18 L 12 22 L 3 22" fill="none" stroke="#000" strokeWidth="2" />
+                <path d="M 32 3 L 32 7 L 23 7" fill="none" stroke="#000" strokeWidth="2" />
+                <path d="M 32 18 L 32 22 L 23 22" fill="none" stroke="#000" strokeWidth="2" />
+                <text x="17" y="-8" fill="#9ca3af" fontSize="8" fontFamily="sans-serif" textAnchor="middle">SATA III 6Gb/s</text>
               </g>
 
-              {/* Southbridge / Chipset Heatsink */}
-              <rect x="320" y="420" width="60" height="60" fill="#1a1a1c" stroke="#222" rx="2" />
-              {Array.from({ length: 6 }).map((_, i) => (
-                <line key={`hs-${i}`} x1="320" y1={425 + i * 10} x2="380" y2={425 + i * 10} stroke="#333" strokeWidth="2" />
-              ))}
+              {/* Southbridge / Chipset Heatsink (Aesthetic Upgrade) */}
+              <g transform="translate(320, 420)">
+                <rect x="0" y="0" width="60" height="60" fill="#18181b" stroke="#27272a" strokeWidth="2" rx="4" />
+                <polygon points="0,0 60,0 30,60" fill="#27272a" />
+                <polygon points="60,60 0,60 30,0" fill="#111" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <line key={`hs-${i}`} x1="5" y1={10 + i * 10} x2="55" y2={10 + i * 10} stroke="#3f3f46" strokeWidth="2" />
+                ))}
+                <circle cx="30" cy="30" r="10" fill="#dc2626" />
+                <circle cx="30" cy="30" r="6" fill="#000" />
+                <text x="30" y="33" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">X</text>
+              </g>
 
               {/* Motherboard Battery (CMOS) */}
-              <circle cx="280" cy="460" r="12" fill="#ccc" stroke="#888" />
-              <circle cx="280" cy="460" r="8" fill="none" stroke="#aaa" />
+              <circle cx="280" cy="460" r="14" fill="#18181b" stroke="#27272a" strokeWidth="2" />
+              <circle cx="280" cy="460" r="12" fill="#e5e7eb" stroke="#9ca3af" />
+              <circle cx="280" cy="460" r="10" fill="none" stroke="#d1d5db" />
+              <text x="280" y="462" fill="#6b7280" fontSize="6" fontFamily="sans-serif" textAnchor="middle">CR2032</text>
+              <text x="280" y="468" fill="#6b7280" fontSize="4" fontFamily="sans-serif" textAnchor="middle">3V</text>
+
+              {/* Front Panel Headers (Bonus realism) */}
+              <g transform="translate(300, 520)">
+                <rect x="0" y="0" width="60" height="15" fill="#18181b" stroke="#27272a" rx="1" />
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <circle key={`fpanel-${i}`} cx={6 + i * 6} cy="4" r="1" fill="#facc15" />
+                ))}
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <circle key={`fpanel2-${i}`} cx={6 + i * 6} cy="11" r="1" fill="#facc15" />
+                ))}
+                <text x="30" y="-4" fill="#9ca3af" fontSize="6" fontFamily="sans-serif" textAnchor="middle">F_PANEL</text>
+              </g>
+
+              {/* Audio Capacitors */}
+              <g transform="translate(30, 480)">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <circle key={`acap-${i}`} cx={i * 15} cy={i % 2 === 0 ? 0 : 10} r="5" fill="#eab308" stroke="#ca8a04" />
+                ))}
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <path key={`acaph-${i}`} d={`M ${i * 15 - 5} ${i % 2 === 0 ? 0 : 10} A 5 5 0 0 1 ${i * 15 + 5} ${i % 2 === 0 ? 0 : 10}`} fill="#000" />
+                ))}
+              </g>
             </g>
 
             {/* Render Cables if PSU is installed */}
             {installed['psu'] && (
               <g>
-                {/* EPS 8-pin Cable */}
+                {/* EPS 4-pin Cable */}
                 {(!chassisClosed || cables.eps) && (
                   <g>
                     <path
@@ -323,6 +465,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                       animate={{ x: cables.eps ? 465 : (draggingId === 'cable-eps' ? dragPos.x : 340), y: cables.eps ? 177 : (draggingId === 'cable-eps' ? dragPos.y : 600) }}
                       onPointerDown={(e: any) => handlePointerDown('cable-eps', e)}
                       style={{ cursor: draggingId === 'cable-eps' ? 'grabbing' : 'grab' }}
+                      className={isRemovable('cable-eps') ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
                     >
                       <rect x="-15" y="-10" width="30" height="20" fill="#0f172a" stroke="#f87171" rx="2" />
                       <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle">4-PIN</text>
@@ -341,6 +484,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                       animate={{ x: cables.atx ? 760 : (draggingId === 'cable-atx' ? dragPos.x : 380), y: cables.atx ? 390 : (draggingId === 'cable-atx' ? dragPos.y : 620) }}
                       onPointerDown={(e: any) => handlePointerDown('cable-atx', e)}
                       style={{ cursor: draggingId === 'cable-atx' ? 'grabbing' : 'grab' }}
+                      className={isRemovable('cable-atx') ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
                     >
                       <rect x="-10" y="-40" width="20" height="80" fill="#0f172a" stroke="#facc15" rx="2" />
                       <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle" transform="rotate(-90 0 0)">24-PIN ATX</text>
@@ -364,6 +508,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                       animate={{ x: cables.sata ? 770 : (draggingId === 'cable-sata' ? dragPos.x : 300), y: cables.sata ? 570 : (draggingId === 'cable-sata' ? dragPos.y : 550) }}
                       onPointerDown={(e: any) => handlePointerDown('cable-sata', e)}
                       style={{ cursor: draggingId === 'cable-sata' ? 'grabbing' : 'grab' }}
+                      className={isRemovable('cable-sata') ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
                     >
                       <rect x="-10" y="-5" width="20" height="10" fill="#0f172a" stroke="#ef4444" rx="1" />
                       <text x="0" y="2" fill="#fff" fontSize="6" fontFamily="sans-serif" textAnchor="middle">SATA</text>
@@ -391,6 +536,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                   transition={{ type: isDragging ? "tween" : "spring", duration: isDragging ? 0 : 0.3 }}
                   style={{ cursor: (mode === 'assembly' && comp.id === 'cpuFan' && !installed['cpu']) || (mode === 'disassembly' && comp.id === 'cpu' && installed['cpuFan']) ? 'not-allowed' : (isDragging ? 'grabbing' : 'grab') }}
                   onPointerDown={(e: any) => handlePointerDown(comp.id, e)}
+                  className={isRemovable(comp.id) ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
                 >
                   {/* Drop Shadow when dragging */}
                   {isDragging && <rect x={5} y={10} width={comp.width} height={comp.height} fill="rgba(0,0,0,0.5)" rx="4" />}

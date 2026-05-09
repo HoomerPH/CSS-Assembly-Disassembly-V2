@@ -30,7 +30,7 @@ export default function App() {
     if (fullStage === 0) {
       return (
         <div className="relative">
-          <button 
+          <button
             onClick={() => setMode('menu')}
             className="absolute top-4 left-4 z-50 flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[#1f1f23] text-white rounded-md transition-colors border border-[#333] hover:bg-[#2a2a30]"
           >
@@ -66,27 +66,27 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0c0c0e] text-[#d1d1d1] font-sans flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0c0c0e] to-[#0c0c0e] relative overflow-hidden">
-      
+
       {/* Background decoration */}
       <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgMEg0MFY0MEgwWiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0wIDQwTDQwIDQwIiBzdHJva2U9IiMxZjFmMjMiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik00MCAwTDQwIDQwIiBzdHJva2U9IiMxZjFmMjMiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')] opacity-30" />
-      
+
       <div className="z-10 text-center max-w-3xl w-full">
         <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700 text-slate-300 text-sm font-mono mb-8">
           <BookOpen className="w-4 h-4 text-[#a88d5e]" />
           <span>hardware_fundamentals_v2.5A</span>
         </div>
-        
+
         <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-6 drop-shadow-2xl">
-          PC Hardware Simulator
+          CSS - Assembly and Disassembly
         </h1>
         <p className="text-lg text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
           Learn how computers are put together, from core components to external peripherals. Choose a simulation scenario to begin.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          
+
           {/* Card: PC Assembly */}
-          <button 
+          <button
             onClick={() => setMode('pc-assembly')}
             className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-emerald-500/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
           >
@@ -104,7 +104,7 @@ export default function App() {
           </button>
 
           {/* Card: PC Disassembly */}
-          <button 
+          <button
             onClick={() => setMode('pc-disassembly')}
             className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-red-500/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-500/50"
           >
@@ -122,7 +122,7 @@ export default function App() {
           </button>
 
           {/* Card: Rear Panel Assembly */}
-          <button 
+          <button
             onClick={() => setMode('rear-assembly')}
             className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-[#3b82f6]/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/50"
           >
@@ -140,7 +140,7 @@ export default function App() {
           </button>
 
           {/* Card: Rear Panel Disconnection */}
-          <button 
+          <button
             onClick={() => setMode('rear-disassembly')}
             className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-amber-500/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           >
@@ -157,8 +157,8 @@ export default function App() {
             </div>
           </button>
 
-        {/* Card: Full Assembly Scene */}
-          <button 
+          {/* Card: Full Assembly Scene */}
+          <button
             onClick={() => changeMode('full-assembly')}
             className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-emerald-400/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-400/50 md:col-span-2"
           >
@@ -181,7 +181,7 @@ export default function App() {
           </button>
 
           {/* Card: Full Disassembly Scene */}
-          <button 
+          <button
             onClick={() => changeMode('full-disassembly')}
             className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-red-400/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-400/50 md:col-span-2"
           >
