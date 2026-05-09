@@ -1,0 +1,5 @@
+{
+  "name": "2.5D Rear Panel I/O Visualizer",
+  "description": "An interactive, realistically styled 2.5D schematic diagram of a computer rear I/O setup showing proper component cabling.",
+  "requestFramePermissions": []
+}
