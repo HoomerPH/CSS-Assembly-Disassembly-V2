@@ -319,7 +319,7 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
     <div className="min-h-screen bg-[#0c0c0e] text-[#d1d1d1] font-sans flex flex-col relative overflow-hidden">
       {/* Header */}
       <header className="p-6 z-10 w-full absolute top-0 left-0 pointer-events-none">
-        <button onClick={onBack} className="pointer-events-auto text-slate-400 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors bg-[#0c0c0e]/80 px-4 py-2 rounded-full border border-[#1f1f23] backdrop-blur">
+        <button onClick={onBack} className="pointer-events-auto text-slate-400 hover:text-white flex items-center gap-2 text-base md:text-sm font-medium transition-colors bg-[#0c0c0e]/80 px-4 py-2 rounded-full border border-[#1f1f23] backdrop-blur">
           <ArrowLeft className="w-4 h-4" /> Back to Menu
         </button>
       </header>
@@ -328,7 +328,7 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
       <main className="flex-1 w-full bg-[#0c0c0e] relative overflow-hidden flex items-center justify-center">
         <svg 
           viewBox="0 0 1200 800" 
-          className="w-full h-full block min-h-[500px] touch-none select-none"
+          className="w-full h-full block min-h-[50vh] md:min-h-[500px] touch-none select-none"
           ref={svgRef}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -806,18 +806,18 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
       </main>
 
       {/* Footer */}
-      <footer className="p-4 border-t border-[#1f1f23] flex justify-between bg-[#080809] z-10 w-full overflow-x-auto text-[#eee]">
-        <div className="flex gap-12 text-xs font-mono">
+      <footer className="p-4 border-t border-[#1f1f23] flex flex-wrap justify-between gap-4 bg-[#080809] z-10 w-full text-[#eee]">
+        <div className="flex flex-wrap gap-4 md:gap-12 text-sm md:text-xs font-mono">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-[#555] uppercase font-bold tracking-wider">Voltage Input</span>
+            <span className="text-xs md:text-[10px] text-[#555] uppercase font-bold tracking-wider">Voltage Input</span>
             <span className="text-[#eee]">220-240V AC</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-[#555] uppercase font-bold tracking-wider">Peak Load</span>
+            <span className="text-xs md:text-[10px] text-[#555] uppercase font-bold tracking-wider">Peak Load</span>
             <span className="text-[#eee]">2.5 AMP MAX</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-[#555] uppercase font-bold tracking-wider">Surge Protection</span>
+            <span className="text-xs md:text-[10px] text-[#555] uppercase font-bold tracking-wider">Surge Protection</span>
             <span className="text-[#22c55e]">ACTIVE</span>
           </div>
         </div>
@@ -832,7 +832,7 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-24 right-8 z-50 bg-[#0c0c0e]/95 backdrop-blur-xl border border-[#3b82f6]/50 shadow-[0_0_30px_rgba(59,130,246,0.2)] p-6 rounded-xl max-w-sm"
+            className="absolute bottom-4 left-4 right-4 md:bottom-24 md:left-auto md:right-8 z-50 bg-[#0c0c0e]/95 backdrop-blur-xl border border-[#3b82f6]/50 shadow-[0_0_30px_rgba(59,130,246,0.2)] p-6 rounded-xl md:max-w-sm"
           >
             <div className="flex items-start gap-4">
               <div className="p-3 rounded-full bg-[#3b82f6]/20">
