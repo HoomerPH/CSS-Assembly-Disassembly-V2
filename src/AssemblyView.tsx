@@ -193,8 +193,8 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
         </svg>
       </div>
 
-      <header className="p-4 border-b border-[#1f1f23] flex items-center justify-between bg-[#080809]/80 backdrop-blur-md z-10 w-full relative">
-        <div className="flex items-center gap-4 w-1/3">
+      <header className="p-4 border-b border-[#1f1f23] flex flex-col md:flex-row items-center justify-between gap-4 bg-[#080809]/80 backdrop-blur-md z-10 w-full relative">
+        <div className="flex items-center gap-4 w-full md:w-1/3">
           <div className="p-2 bg-[#1f1f23] rounded-md">
             <Cpu className="w-6 h-6 text-emerald-500" />
           </div>
@@ -204,25 +204,25 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
           </div>
         </div>
 
-        <div className="flex-1 flex justify-center items-center px-4 z-20">
+        <div className="flex-1 flex justify-center items-center px-4 z-20 w-full md:w-auto">
           {mode === 'assembly' && installed.hdd && !cables.sata && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)] w-full max-w-md">
               Connect the SATA data cable from the HDD to the motherboard!
             </div>
           )}
           {mode === 'assembly' && installed.psu && (!cables.eps || !cables.atx) && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)] w-full max-w-md">
               Connect the 4-pin CPU power and 24-pin ATX power cables from the PSU!
             </div>
           )}
           {mode === 'disassembly' && warningMessage && (
-            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)] w-full max-w-md">
               {warningMessage}
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-4 w-1/3">
+        <div className="flex items-center justify-end gap-4 w-full md:w-1/3">
           <button
             onClick={onBack}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-[#1f1f23] rounded-md transition-colors border border-[#1f1f23]"
@@ -232,9 +232,9 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
         </div>
       </header>
 
-      <main className="flex-1 relative z-0 flex" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
+      <main className="flex-1 relative z-0 flex flex-col lg:flex-row overflow-hidden" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
         {/* Left Side: Assembly Canvas */}
-        <div className="flex-1 relative border-r border-[#1f1f23]">
+        <div className="flex-1 relative lg:border-r border-b lg:border-b-0 border-[#1f1f23] min-h-[40vh] lg:min-h-0">
           <svg
             ref={svgRef}
             className="w-full h-full absolute inset-0"
@@ -740,10 +740,10 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
         <AnimatePresence>
           {!chassisClosed && (
             <motion.div
-              initial={{ opacity: 1, width: 256 }} // 64 * 4 = 256px
-              exit={{ opacity: 0, width: 0 }}
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="w-64 shrink-0 bg-[#0c0c0e] border-l border-[#1f1f23] flex flex-col p-4 z-10 overflow-y-auto"
+              className="w-full lg:w-64 h-[40vh] lg:h-full shrink-0 bg-[#0c0c0e] lg:border-l border-t lg:border-t-0 border-[#1f1f23] flex flex-col p-4 z-10 overflow-y-auto"
             >
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 border-b border-[#1f1f23] pb-2">Component Tray</h2>
               <div className="flex flex-col gap-3">
