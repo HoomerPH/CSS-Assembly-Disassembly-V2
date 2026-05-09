@@ -199,24 +199,24 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
             <Cpu className="w-6 h-6 text-emerald-500" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-white tracking-tight">{mode === 'assembly' ? 'PC Assembly' : 'PC Disassembly'}</h1>
-            <p className="text-sm text-slate-500">{mode === 'assembly' ? 'Install the components onto the motherboard.' : 'Remove all components from the motherboard.'}</p>
+            <h1 className="text-2xl md:text-xl font-semibold text-white tracking-tight">{mode === 'assembly' ? 'PC Assembly' : 'PC Disassembly'}</h1>
+            <p className="text-base md:text-sm text-slate-500">{mode === 'assembly' ? 'Install the components onto the motherboard.' : 'Remove all components from the motherboard.'}</p>
           </div>
         </div>
 
         <div className="flex-1 flex justify-center items-center px-4 z-20 w-full md:w-auto">
           {mode === 'assembly' && installed.hdd && !cables.sata && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)] w-full max-w-md">
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-base md:text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)] w-full max-w-md">
               Connect the SATA data cable from the HDD to the motherboard!
             </div>
           )}
           {mode === 'assembly' && installed.psu && (!cables.eps || !cables.atx) && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)] w-full max-w-md">
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-base md:text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)] w-full max-w-md">
               Connect the 4-pin CPU power and 24-pin ATX power cables from the PSU!
             </div>
           )}
           {mode === 'disassembly' && warningMessage && (
-            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)] w-full max-w-md">
+            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-400 text-base md:text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)] w-full max-w-md">
               {warningMessage}
             </div>
           )}
@@ -225,7 +225,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
         <div className="flex items-center justify-end gap-4 w-full md:w-1/3">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-[#1f1f23] rounded-md transition-colors border border-[#1f1f23]"
+            className="flex items-center gap-2 px-4 py-2 text-base md:text-sm font-medium hover:bg-[#1f1f23] rounded-md transition-colors border border-[#1f1f23]"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Menu
           </button>
@@ -745,7 +745,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
               transition={{ duration: 0.3 }}
               className="w-full lg:w-64 h-[40vh] lg:h-full shrink-0 bg-[#0c0c0e] lg:border-l border-t lg:border-t-0 border-[#1f1f23] flex flex-col p-4 z-10 overflow-y-auto"
             >
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 border-b border-[#1f1f23] pb-2">Component Tray</h2>
+              <h2 className="text-base md:text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 border-b border-[#1f1f23] pb-2">Component Tray</h2>
               <div className="flex flex-col gap-3">
                 {PC_COMPONENTS.map((comp) => {
                   const isInstalled = installed[comp.id];
@@ -763,8 +763,8 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                         {isSuccess && <CheckCircle2 className="w-3 h-3 text-[#0c0c0e]" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-200 truncate">{comp.name}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-base md:text-sm font-medium text-slate-200 truncate">{comp.name}</div>
+                        <div className="text-sm md:text-xs text-slate-500">
                           {mode === 'assembly'
                             ? (isInstalled ? 'Installed' : 'Pending')
                             : (!isInstalled ? 'Removed' : 'Installed')}
@@ -775,7 +775,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                 })}
               </div>
 
-              <div className="mt-8 p-4 bg-[#141415] border border-[#1f1f23] rounded-md text-xs text-slate-400 leading-relaxed">
+              <div className="mt-8 p-4 bg-[#141415] border border-[#1f1f23] rounded-md text-sm md:text-xs text-slate-400 leading-relaxed">
                 <strong>Hint:</strong> {mode === 'assembly' ? 'Drag components from the canvas area on the right into their corresponding slots on the motheroard. The CPU must be installed before the CPU Cooler can be attached.' : 'Click and drag components away from the motherboard to remove them. The CPU Cooler must be removed before the CPU.'}
               </div>
             </motion.div>
