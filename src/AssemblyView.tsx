@@ -29,7 +29,7 @@ const PC_COMPONENTS: ComponentItem[] = [
   { id: 'hdd', name: 'Hard Disk Drive (HDD)', description: 'Mass storage drive for large files and backups.', type: 'storage', color: '#ec4899', startX: 1060, startY: 75, targetX: 180, targetY: 420, width: 80, height: 110 },
 ];
 
-export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'disassembly', onBack: () => void }) {
+export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode: 'assembly' | 'disassembly', onBack: () => void, onNext?: () => void, nextLabel?: string }) {
   const [installed, setInstalled] = useState<Record<string, boolean>>(() => {
     if (mode === 'disassembly') {
       const all: Record<string, boolean> = {};
@@ -47,6 +47,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const [chassisClosed, setChassisClosed] = useState(false);
   const [powerOnStage, setPowerOnStage] = useState<'idle' | 'post' | 'os'>('idle');
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   const getSVGPoint = (e: React.PointerEvent) => {
@@ -60,13 +61,26 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
   const handlePointerDown = (id: string, e: React.PointerEvent) => {
     e.stopPropagation();
     if (chassisClosed) return; // Cannot modify components if chassis is closed
-    
+
+    setWarningMessage(null); // Clear any previous warning
+
     if (mode === 'assembly') {
       if (id === 'cpuFan' && !installed['cpu']) return; // Must install CPU first
     } else {
-      if (id === 'cpu' && installed['cpuFan']) return; // Must remove fan first
+      if (id === 'cpu' && installed['cpuFan']) {
+        setWarningMessage('The CPU Cooler must be removed before the CPU.');
+        return; 
+      }
+      if (id === 'psu' && (cables.eps || cables.atx)) {
+        setWarningMessage('Please disconnect the 4-pin and 24-pin cables before removing the Power Supply.');
+        return;
+      }
+      if (id === 'hdd' && cables.sata) {
+        setWarningMessage('Please disconnect the SATA cable before removing the HDD.');
+        return;
+      }
     }
-    
+
     setDraggingId(id);
     setDragPos(getSVGPoint(e));
     if (id === 'cable-eps') setCables(prev => ({ ...prev, eps: false }));
@@ -99,14 +113,14 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
         } else {
           const component = PC_COMPONENTS.find(c => c.id === draggingId);
           if (component) {
-            const dist = Math.hypot(dragPos.x - (component.targetX + component.width/2), dragPos.y - (component.targetY + component.height/2));
+            const dist = Math.hypot(dragPos.x - (component.targetX + component.width / 2), dragPos.y - (component.targetY + component.height / 2));
             if (dist < 60) { // snap threshold
               setInstalled(prev => ({ ...prev, [draggingId]: true }));
             }
           }
         }
       } else {
-         if (draggingId === 'cable-eps') {
+        if (draggingId === 'cable-eps') {
           if (dragPos.x > 750) setCables(prev => ({ ...prev, eps: false }));
         } else if (draggingId === 'cable-atx') {
           if (dragPos.x > 750) setCables(prev => ({ ...prev, atx: false }));
@@ -114,26 +128,26 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
           if (dragPos.x > 750) setCables(prev => ({ ...prev, sata: false }));
         }
 
-         const component = PC_COMPONENTS.find(c => c.id === draggingId);
-          if (component) {
-            const distToDropArea = dragPos.x > 750; // simple visual check
-            if (distToDropArea) {
-              setInstalled(prev => ({...prev, [draggingId]: false}));
-            }
+        const component = PC_COMPONENTS.find(c => c.id === draggingId);
+        if (component) {
+          const distToDropArea = dragPos.x > 750; // simple visual check
+          if (distToDropArea) {
+            setInstalled(prev => ({ ...prev, [draggingId]: false }));
           }
+        }
       }
       setDraggingId(null);
     }
   };
 
   const allInstalled = PC_COMPONENTS.every(c => installed[c.id]);
-  const isComplete = mode === 'assembly' 
+  const isComplete = mode === 'assembly'
     ? allInstalled && cables.eps && cables.atx && cables.sata
     : Object.values(installed).every(val => !val) && !cables.eps && !cables.atx && !cables.sata;
 
   const getTooltipContent = (id: string) => {
     if (id.startsWith('cable-')) {
-      if (id === 'cable-eps') return { name: '8-Pin CPU Power', desc: 'Delivers dedicated power to the CPU.' };
+      if (id === 'cable-eps') return { name: '4-Pin CPU Power', desc: 'Delivers dedicated power to the CPU.' };
       if (id === 'cable-atx') return { name: '24-Pin ATX Power', desc: 'Supplies main power to the motherboard and components.' };
       if (id === 'cable-sata') return { name: 'SATA Data Cable', desc: 'Transfers data between the motherboard and storage drives.' };
       return { name: 'Cable', desc: 'Connects components.' };
@@ -145,7 +159,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
   if (powerOnStage === 'post' || powerOnStage === 'os') {
     return <OSSimulation onPowerOff={() => {
       setPowerOnStage('idle');
-      // maybe we stay in closed chassis, idle power state
+      if (onNext) onNext();
     }} />;
   }
 
@@ -164,7 +178,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
       </div>
 
       <header className="p-4 border-b border-[#1f1f23] flex items-center justify-between bg-[#080809]/80 backdrop-blur-md z-10 w-full relative">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-1/3">
           <div className="p-2 bg-[#1f1f23] rounded-md">
             <Cpu className="w-6 h-6 text-emerald-500" />
           </div>
@@ -173,8 +187,27 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
             <p className="text-sm text-slate-500">{mode === 'assembly' ? 'Install the components onto the motherboard.' : 'Remove all components from the motherboard.'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button 
+
+        <div className="flex-1 flex justify-center items-center px-4 z-20">
+          {mode === 'assembly' && installed.hdd && !cables.sata && (
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              Connect the SATA data cable from the HDD to the motherboard!
+            </div>
+          )}
+          {mode === 'assembly' && installed.psu && (!cables.eps || !cables.atx) && (
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              Connect the 4-pin CPU power and 24-pin ATX power cables from the PSU!
+            </div>
+          )}
+          {mode === 'disassembly' && warningMessage && (
+            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+              {warningMessage}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-4 w-1/3">
+          <button
             onClick={onBack}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-[#1f1f23] rounded-md transition-colors border border-[#1f1f23]"
           >
@@ -186,10 +219,10 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
       <main className="flex-1 relative z-0 flex" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
         {/* Left Side: Assembly Canvas */}
         <div className="flex-1 relative border-r border-[#1f1f23]">
-          <svg 
-            ref={svgRef} 
-            className="w-full h-full absolute inset-0" 
-            viewBox="0 0 1200 800" 
+          <svg
+            ref={svgRef}
+            className="w-full h-full absolute inset-0"
+            viewBox="0 0 1200 800"
             preserveAspectRatio="xMidYMid meet"
           >
             {/* The PC Case / Chassis */}
@@ -199,19 +232,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
               <text x="350" y="705" fill="#333" fontSize="24" fontFamily="monospace" textAnchor="middle" fontWeight="bold">ATX CHASSIS</text>
             </g>
 
-            <AnimatePresence>
-              {!chassisClosed && (
-                <motion.g 
-                  transform="translate(880, 50)"
-                  initial={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 50 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <rect x="0" y="0" width="290" height="730" fill="#141415" stroke="#1f1f23" strokeWidth="2" rx="10" />
-                  <text x="145" y="30" fill="#666" fontSize="12" fontFamily="monospace" textAnchor="middle" fontWeight="bold">COMPONENT WORKBENCH</text>
-                </motion.g>
-              )}
-            </AnimatePresence>
+
 
             {/* ATX Power Supply Bay */}
             <g transform="translate(200, 650)">
@@ -244,7 +265,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
               {/* 4/8-pin CPU Power Connector */}
               <rect x="100" y="20" width="30" height="15" fill={draggingId === 'cable-eps' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'cable-eps' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-eps' ? 'animate-pulse' : ''} />
               <circle cx="105" cy="27" r="2" fill="#000" /><circle cx="115" cy="27" r="2" fill="#000" /><circle cx="125" cy="27" r="2" fill="#000" />
-              <text x="115" y="15" fill="#666" fontSize="8" fontFamily="sans-serif" textAnchor="middle">8-PIN EPS</text>
+              <text x="115" y="15" fill="#666" fontSize="8" fontFamily="sans-serif" textAnchor="middle">4-PIN EPS</text>
 
               {/* RAM Slots (DIMM) */}
               <g transform="translate(300, 60)">
@@ -279,7 +300,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
 
               {/* Southbridge / Chipset Heatsink */}
               <rect x="320" y="420" width="60" height="60" fill="#1a1a1c" stroke="#222" rx="2" />
-              {Array.from({length: 6}).map((_, i) => (
+              {Array.from({ length: 6 }).map((_, i) => (
                 <line key={`hs-${i}`} x1="320" y1={425 + i * 10} x2="380" y2={425 + i * 10} stroke="#333" strokeWidth="2" />
               ))}
 
@@ -294,17 +315,17 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                 {/* EPS 8-pin Cable */}
                 {(!chassisClosed || cables.eps) && (
                   <g>
-                    <path 
-                      d={`M 320 670 Q 350 400 ${cables.eps ? '465 177' : (draggingId === 'cable-eps' ? `${dragPos.x} ${dragPos.y}` : '340 600')}`} 
-                      fill="none" stroke="#f87171" strokeWidth="6" strokeLinecap="round" 
+                    <path
+                      d={`M 320 670 Q 350 400 ${cables.eps ? '465 177' : (draggingId === 'cable-eps' ? `${dragPos.x} ${dragPos.y}` : '340 600')}`}
+                      fill="none" stroke="#f87171" strokeWidth="6" strokeLinecap="round"
                     />
-                    <motion.g 
+                    <motion.g
                       animate={{ x: cables.eps ? 465 : (draggingId === 'cable-eps' ? dragPos.x : 340), y: cables.eps ? 177 : (draggingId === 'cable-eps' ? dragPos.y : 600) }}
                       onPointerDown={(e: any) => handlePointerDown('cable-eps', e)}
                       style={{ cursor: draggingId === 'cable-eps' ? 'grabbing' : 'grab' }}
                     >
                       <rect x="-15" y="-10" width="30" height="20" fill="#0f172a" stroke="#f87171" rx="2" />
-                      <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle">8-PIN</text>
+                      <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle">4-PIN</text>
                     </motion.g>
                   </g>
                 )}
@@ -312,11 +333,11 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                 {/* ATX 24-pin Cable */}
                 {(!chassisClosed || cables.atx) && (
                   <g>
-                    <path 
-                      d={`M 345 685 Q 550 650 ${cables.atx ? '760 390' : (draggingId === 'cable-atx' ? `${dragPos.x} ${dragPos.y}` : '380 620')}`} 
-                      fill="none" stroke="#facc15" strokeWidth="8" strokeLinecap="round" 
+                    <path
+                      d={`M 345 685 Q 550 650 ${cables.atx ? '760 390' : (draggingId === 'cable-atx' ? `${dragPos.x} ${dragPos.y}` : '380 620')}`}
+                      fill="none" stroke="#facc15" strokeWidth="8" strokeLinecap="round"
                     />
-                    <motion.g 
+                    <motion.g
                       animate={{ x: cables.atx ? 760 : (draggingId === 'cable-atx' ? dragPos.x : 380), y: cables.atx ? 390 : (draggingId === 'cable-atx' ? dragPos.y : 620) }}
                       onPointerDown={(e: any) => handlePointerDown('cable-atx', e)}
                       style={{ cursor: draggingId === 'cable-atx' ? 'grabbing' : 'grab' }}
@@ -335,11 +356,11 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                 {/* SATA Cable */}
                 {(!chassisClosed || cables.sata) && (
                   <g>
-                    <path 
-                      d={`M 240 470 Q 400 650 ${cables.sata ? '770 570' : (draggingId === 'cable-sata' ? `${dragPos.x} ${dragPos.y}` : '300 550')}`} 
-                      fill="none" stroke="#ef4444" strokeWidth="4" strokeLinecap="round" 
+                    <path
+                      d={`M 240 470 Q 400 650 ${cables.sata ? '770 570' : (draggingId === 'cable-sata' ? `${dragPos.x} ${dragPos.y}` : '300 550')}`}
+                      fill="none" stroke="#ef4444" strokeWidth="4" strokeLinecap="round"
                     />
-                    <motion.g 
+                    <motion.g
                       animate={{ x: cables.sata ? 770 : (draggingId === 'cable-sata' ? dragPos.x : 300), y: cables.sata ? 570 : (draggingId === 'cable-sata' ? dragPos.y : 550) }}
                       onPointerDown={(e: any) => handlePointerDown('cable-sata', e)}
                       style={{ cursor: draggingId === 'cable-sata' ? 'grabbing' : 'grab' }}
@@ -352,16 +373,16 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
               </g>
             )}
 
-              {/* Render Components */}
+            {/* Render Components */}
             {PC_COMPONENTS.map((comp) => {
               // Hide components if they are on the workbench but the workbench is hidden (chassis is closed)
               const isInstalled = installed[comp.id];
               const isDragging = draggingId === comp.id;
-              
+
               if (chassisClosed && !isInstalled && !isDragging) return null;
-              
-              const currentX = isDragging ? dragPos.x - comp.width/2 : (isInstalled ? comp.targetX : comp.startX);
-              const currentY = isDragging ? dragPos.y - comp.height/2 : (isInstalled ? comp.targetY : comp.startY);
+
+              const currentX = isDragging ? dragPos.x - comp.width / 2 : (isInstalled ? comp.targetX : comp.startX);
+              const currentY = isDragging ? dragPos.y - comp.height / 2 : (isInstalled ? comp.targetY : comp.startY);
 
               return (
                 <motion.g
@@ -373,7 +394,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                 >
                   {/* Drop Shadow when dragging */}
                   {isDragging && <rect x={5} y={10} width={comp.width} height={comp.height} fill="rgba(0,0,0,0.5)" rx="4" />}
-                  
+
                   {comp.id === 'cpu' && (
                     <g>
                       <rect width={comp.width} height={comp.height} fill="#94a3b8" stroke="#475569" strokeWidth="2" rx="2" />
@@ -395,8 +416,8 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                         {Array.from({ length: 9 }).map((_, i) => {
                           const angle = (i * 40 * Math.PI) / 180;
                           return (
-                            <line 
-                              key={i} 
+                            <line
+                              key={i}
                               x1={45 + Math.cos(angle) * 15} y1={45 + Math.sin(angle) * 15}
                               x2={45 + Math.cos(angle + 0.3) * 35} y2={45 + Math.sin(angle + 0.3) * 35}
                             />
@@ -469,7 +490,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                       <text x="40" y="102" fill="#fff" fontSize="6" fontFamily="sans-serif" textAnchor="middle">2TB SATA</text>
                     </g>
                   )}
-                  
+
                 </motion.g>
               );
             })}
@@ -488,10 +509,10 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                   <foreignObject x="18" y="-35" width="200" height="100">
                     <div className="bg-[#020617] border-2 border-[#334155] rounded-md p-2 text-slate-100 flex flex-col shadow-xl">
                       <div className="text-xs font-bold mb-1">
-                         {getTooltipContent(draggingId).name}
+                        {getTooltipContent(draggingId).name}
                       </div>
                       <div className="text-[10px] leading-tight text-slate-400">
-                         {getTooltipContent(draggingId).desc}
+                        {getTooltipContent(draggingId).desc}
                       </div>
                     </div>
                   </foreignObject>
@@ -510,26 +531,26 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ type: 'spring', damping: 20 }}
                   >
-                  <rect x="18" y="18" width="664" height="694" fill="rgba(10, 10, 12, 0.85)" stroke="#334155" strokeWidth="4" rx="6" />
-                  
-                  {/* Reflections */}
-                  <path d="M 20 20 L 300 600 L 20 600 Z" fill="rgba(255, 255, 255, 0.02)" />
-                  <path d="M 600 20 L 680 20 L 680 700 L 500 700 Z" fill="rgba(255, 255, 255, 0.01)" />
+                    <rect x="18" y="18" width="664" height="694" fill="rgba(10, 10, 12, 0.85)" stroke="#334155" strokeWidth="4" rx="6" />
 
-                  {/* Glass Panel Screws */}
-                  <circle cx="35" cy="35" r="8" fill="#1e293b" stroke="#0f172a" />
-                  <circle cx="665" cy="35" r="8" fill="#1e293b" stroke="#0f172a" />
-                  <circle cx="35" cy="695" r="8" fill="#1e293b" stroke="#0f172a" />
-                  <circle cx="665" cy="695" r="8" fill="#1e293b" stroke="#0f172a" />
+                    {/* Reflections */}
+                    <path d="M 20 20 L 300 600 L 20 600 Z" fill="rgba(255, 255, 255, 0.02)" />
+                    <path d="M 600 20 L 680 20 L 680 700 L 500 700 Z" fill="rgba(255, 255, 255, 0.01)" />
 
-                  {/* Power Button */}
-                  <g transform="translate(620, 60)" style={{ cursor: 'pointer' }} onClick={() => setPowerOnStage('post')}>
-                    <circle cx="0" cy="0" r="25" fill="#1e293b" stroke="#334155" strokeWidth="2" className="hover:fill-[#334155] transition-colors" />
-                    <circle cx="0" cy="0" r="18" fill="#0f172a" />
-                    {/* Power icon */}
-                    <path d="M -8 -8 A 12 12 0 1 0 8 -8 M 0 -12 L 0 2" fill="none" stroke="#eab308" strokeWidth="3" strokeLinecap="round" />
-                    <text x="0" y="40" fill="#eab308" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">POWER ON</text>
-                  </g>
+                    {/* Glass Panel Screws */}
+                    <circle cx="35" cy="35" r="8" fill="#1e293b" stroke="#0f172a" />
+                    <circle cx="665" cy="35" r="8" fill="#1e293b" stroke="#0f172a" />
+                    <circle cx="35" cy="695" r="8" fill="#1e293b" stroke="#0f172a" />
+                    <circle cx="665" cy="695" r="8" fill="#1e293b" stroke="#0f172a" />
+
+                    {/* Power Button */}
+                    <g transform="translate(620, 60)" style={{ cursor: 'pointer' }} onClick={() => setPowerOnStage('post')}>
+                      <circle cx="0" cy="0" r="25" fill="#1e293b" stroke="#334155" strokeWidth="2" className="hover:fill-[#334155] transition-colors" />
+                      <circle cx="0" cy="0" r="18" fill="#0f172a" />
+                      {/* Power icon */}
+                      <path d="M -8 -8 A 12 12 0 1 0 8 -8 M 0 -12 L 0 2" fill="none" stroke="#eab308" strokeWidth="3" strokeLinecap="round" />
+                      <text x="0" y="40" fill="#eab308" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">POWER ON</text>
+                    </g>
                   </motion.g>
                 </g>
               )}
@@ -539,31 +560,31 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
           {/* Success Overlay when all built */}
           <AnimatePresence>
             {isComplete && !chassisClosed && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="absolute inset-0 bg-emerald-500/10 backdrop-blur-sm z-20 flex items-center justify-center pointer-events-none"
               >
-                  <div className="bg-[#0c0c0e] p-8 rounded-xl border border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.3)] text-center max-w-md pointer-events-auto">
-                    <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-white mb-2">{mode === 'assembly' ? 'Build Complete!' : 'Disassembly Complete!'}</h2>
-                    <p className="text-slate-400 mb-6">{mode === 'assembly' ? 'You\'ve successfully installed all critical components onto the motherboard.' : 'You\'ve successfully removed all components.'}</p>
-                    {mode === 'assembly' && (
-                      <button 
-                        onClick={() => setChassisClosed(true)}
-                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors w-full"
-                      >
-                        Close Chassis & Power Up
-                      </button>
-                    )}
-                    <button 
-                      onClick={onBack}
-                      className="mt-4 px-6 py-3 bg-transparent hover:bg-[#141415] border border-slate-700 text-slate-300 font-semibold rounded-lg transition-colors w-full"
+                <div className="bg-[#0c0c0e] p-8 rounded-xl border border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.3)] text-center max-w-md pointer-events-auto">
+                  <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold text-white mb-2">{mode === 'assembly' ? 'Build Complete!' : 'Disassembly Complete!'}</h2>
+                  <p className="text-slate-400 mb-6">{mode === 'assembly' ? 'You\'ve successfully installed all critical components onto the motherboard.' : 'You\'ve successfully removed all components.'}</p>
+                  {mode === 'assembly' && (
+                    <button
+                      onClick={() => setChassisClosed(true)}
+                      className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors w-full"
                     >
-                      Return to Menu
+                      Close Chassis & Power Up
                     </button>
-                  </div>
+                  )}
+                  <button
+                    onClick={onNext || onBack}
+                    className="mt-4 px-6 py-3 bg-transparent hover:bg-[#141415] border border-slate-700 text-slate-300 font-semibold rounded-lg transition-colors w-full"
+                  >
+                    {nextLabel || 'Return to Menu'}
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -572,7 +593,7 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
         {/* Right Side: Component Tray */}
         <AnimatePresence>
           {!chassisClosed && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 1, width: 256 }} // 64 * 4 = 256px
               exit={{ opacity: 0, width: 0 }}
               transition={{ duration: 0.3 }}
@@ -584,43 +605,32 @@ export default function AssemblyView({ mode, onBack }: { mode: 'assembly' | 'dis
                   const isInstalled = installed[comp.id];
                   const isSuccess = mode === 'assembly' ? isInstalled : !isInstalled;
                   return (
-                    <div 
-                      key={`tray-${comp.id}`} 
-                      className={`p-3 rounded-md border flex items-center gap-3 transition-colors ${
-                        isSuccess ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[#141415] border-[#1f1f23]'
-                      }`}
+                    <div
+                      key={`tray-${comp.id}`}
+                      className={`p-3 rounded-md border flex items-center gap-3 transition-colors ${isSuccess ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[#141415] border-[#1f1f23]'
+                        }`}
                     >
-                       <div 
-                         className="w-4 h-4 rounded-full shadow-inner flex items-center justify-center shrink-0" 
-                         style={{ backgroundColor: comp.color }}
-                       >
-                         {isSuccess && <CheckCircle2 className="w-3 h-3 text-[#0c0c0e]" />}
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <div className="text-sm font-medium text-slate-200 truncate">{comp.name}</div>
-                         <div className="text-xs text-slate-500">
-                           {mode === 'assembly' 
-                             ? (isInstalled ? 'Installed' : 'Pending') 
-                             : (!isInstalled ? 'Removed' : 'Installed')}
-                         </div>
-                       </div>
+                      <div
+                        className="w-4 h-4 rounded-full shadow-inner flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: comp.color }}
+                      >
+                        {isSuccess && <CheckCircle2 className="w-3 h-3 text-[#0c0c0e]" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-200 truncate">{comp.name}</div>
+                        <div className="text-xs text-slate-500">
+                          {mode === 'assembly'
+                            ? (isInstalled ? 'Installed' : 'Pending')
+                            : (!isInstalled ? 'Removed' : 'Installed')}
+                        </div>
+                      </div>
                     </div>
                   )
                 })}
               </div>
-              
+
               <div className="mt-8 p-4 bg-[#141415] border border-[#1f1f23] rounded-md text-xs text-slate-400 leading-relaxed">
                 <strong>Hint:</strong> {mode === 'assembly' ? 'Drag components from the canvas area on the right into their corresponding slots on the motheroard. The CPU must be installed before the CPU Cooler can be attached.' : 'Click and drag components away from the motherboard to remove them. The CPU Cooler must be removed before the CPU.'}
-                {mode === 'assembly' && installed.hdd && !cables.sata && (
-                  <div className="mt-4 text-emerald-400 font-semibold animate-pulse">
-                    Connect the SATA data cable from the HDD to the motherboard!
-                  </div>
-                )}
-                {mode === 'assembly' && installed.psu && (!cables.eps || !cables.atx) && (
-                  <div className="mt-4 text-emerald-400 font-semibold animate-pulse">
-                    Connect the 8-pin CPU power and 24-pin ATX power cables from the PSU to the motherboard!
-                  </div>
-                )}
               </div>
             </motion.div>
           )}

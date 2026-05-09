@@ -4,10 +4,11 @@ import { Power } from 'lucide-react';
 
 interface OSSimulationProps {
   onPowerOff: () => void;
+  startState?: 'post' | 'os';
 }
 
-export default function OSSimulation({ onPowerOff }: OSSimulationProps) {
-  const [stage, setStage] = useState<'post' | 'os'>('post');
+export default function OSSimulation({ onPowerOff, startState = 'post' }: OSSimulationProps) {
+  const [stage, setStage] = useState<'post' | 'os'>(startState);
   const [logIndex, setLogIndex] = useState(0);
 
   const logs = [

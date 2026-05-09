@@ -1,12 +1,52 @@
 import React, { useState } from 'react';
-import { Monitor, Cpu, ArrowRight, BookOpen } from 'lucide-react';
+import { Monitor, Cpu, ArrowRight, BookOpen, ArrowLeft } from 'lucide-react';
 import RearPanelView from './RearPanelView';
 import AssemblyView from './AssemblyView';
 
-type SimulationMode = 'menu' | 'rear-assembly' | 'rear-disassembly' | 'pc-assembly' | 'pc-disassembly';
+import OSSimulation from './OSSimulation';
+
+type SimulationMode = 'menu' | 'rear-assembly' | 'rear-disassembly' | 'pc-assembly' | 'pc-disassembly' | 'full-assembly' | 'full-disassembly';
 
 export default function App() {
   const [mode, setMode] = useState<SimulationMode>('menu');
+  const [fullStage, setFullStage] = useState<number>(0);
+
+  const changeMode = (newMode: SimulationMode) => {
+    setMode(newMode);
+    setFullStage(0);
+  };
+
+  if (mode === 'full-assembly') {
+    if (fullStage === 0) {
+      return <RearPanelView mode="assembly" onBack={() => setMode('menu')} onNext={() => setFullStage(1)} nextLabel="Proceed to Components Assembly" />;
+    }
+    if (fullStage === 1) {
+      // After assembly, they power up (handled in AssemblyView), and when OS turns off, it returns to Menu
+      return <AssemblyView mode="assembly" onBack={() => setMode('menu')} onNext={() => setMode('menu')} nextLabel="Simulation Complete - Return to Menu" />;
+    }
+  }
+
+  if (mode === 'full-disassembly') {
+    if (fullStage === 0) {
+      return (
+        <div className="relative">
+          <button 
+            onClick={() => setMode('menu')}
+            className="absolute top-4 left-4 z-50 flex items-center gap-2 px-4 py-2 text-sm font-medium bg-[#1f1f23] text-white rounded-md transition-colors border border-[#333] hover:bg-[#2a2a30]"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Menu
+          </button>
+          <OSSimulation startState="os" onPowerOff={() => setFullStage(1)} />
+        </div>
+      );
+    }
+    if (fullStage === 1) {
+      return <AssemblyView mode="disassembly" onBack={() => setMode('menu')} onNext={() => setFullStage(2)} nextLabel="Proceed to Rear Panel Disassembly" />;
+    }
+    if (fullStage === 2) {
+      return <RearPanelView mode="disassembly" onBack={() => setMode('menu')} onNext={() => setMode('menu')} nextLabel="Simulation Complete - Return to Menu" />;
+    }
+  }
 
   if (mode === 'rear-assembly') {
     return <RearPanelView mode="assembly" onBack={() => setMode('menu')} />;
@@ -114,6 +154,52 @@ export default function App() {
             </p>
             <div className="flex items-center text-amber-500 text-sm font-medium mt-auto group-hover:translate-x-2 transition-transform">
               Start Simulation <ArrowRight className="w-4 h-4 ml-2" />
+            </div>
+          </button>
+
+        {/* Card: Full Assembly Scene */}
+          <button 
+            onClick={() => changeMode('full-assembly')}
+            className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-emerald-400/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-400/50 md:col-span-2"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="flex items-start gap-6">
+              <div className="bg-[#1f1f23] w-14 h-14 shrink-0 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <Monitor className="w-6 h-6 text-emerald-400 absolute opacity-50 translate-x-1 translate-y-1" />
+                <Cpu className="w-6 h-6 text-emerald-400 relative z-10" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-2">Full Assembly Scenario</h2>
+                <p className="text-slate-400 text-sm leading-relaxed mb-4 max-w-xl">
+                  Complete end-to-end setup. Start by connecting cables on the Rear Panel, then proceed to assemble internal components, and finally power on the PC to verify success.
+                </p>
+                <div className="flex items-center text-emerald-400 text-sm font-medium mt-auto group-hover:translate-x-2 transition-transform">
+                  Start Full Scenario <ArrowRight className="w-4 h-4 ml-2" />
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* Card: Full Disassembly Scene */}
+          <button 
+            onClick={() => changeMode('full-disassembly')}
+            className="group relative bg-[#141415] hover:bg-slate-800 border border-[#222] hover:border-red-400/50 p-6 rounded-2xl text-left transition-all duration-300 shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-400/50 md:col-span-2"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="flex items-start gap-6">
+              <div className="bg-[#1f1f23] w-14 h-14 shrink-0 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <Cpu className="w-6 h-6 text-red-400 absolute opacity-50 translate-x-1 translate-y-1" />
+                <Monitor className="w-6 h-6 text-red-400 relative z-10" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-2">Full Disassembly Scenario</h2>
+                <p className="text-slate-400 text-sm leading-relaxed mb-4 max-w-xl">
+                  Complete end-to-end teardown. Start by safely turning off the running PC, disassemble all internal components, and finish by disconnecting external cables.
+                </p>
+                <div className="flex items-center text-red-400 text-sm font-medium mt-auto group-hover:translate-x-2 transition-transform">
+                  Start Full Scenario <ArrowRight className="w-4 h-4 ml-2" />
+                </div>
+              </div>
             </div>
           </button>
 

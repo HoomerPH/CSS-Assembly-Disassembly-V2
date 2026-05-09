@@ -241,7 +241,7 @@ const DraggableCable = ({
 };
 
 // --- Main Application Component ---
-export default function RearPanelView({ mode, onBack }: { mode: 'assembly' | 'disassembly', onBack: () => void }) {
+export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mode: 'assembly' | 'disassembly', onBack: () => void, onNext?: () => void, nextLabel?: string }) {
   const [activeLayer, setActiveLayer] = useState<'all' | 'power' | 'data' | 'display'>('all');
   const [connections, setConnections] = useState({
     keyboard: mode === 'disassembly',
@@ -321,50 +321,10 @@ export default function RearPanelView({ mode, onBack }: { mode: 'assembly' | 'di
   return (
     <div className="min-h-screen bg-[#0c0c0e] text-[#d1d1d1] font-sans flex flex-col relative overflow-hidden">
       {/* Header */}
-      <header className="p-6 border-b border-[#1f1f23] flex flex-col xl:flex-row xl:items-center justify-between bg-[#0c0c0e] z-10 w-full gap-6">
-        <div>
-          <button onClick={onBack} className="text-slate-400 hover:text-white flex items-center gap-2 mb-4 text-sm font-medium transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back to Menu
-          </button>
-          <h1 className="text-xs tracking-[0.3em] uppercase text-[#666] font-semibold mb-2 flex items-center gap-3">
-            <Cpu className="w-4 h-4 text-[#a88d5e]" />
-            Hardware Architecture
-          </h1>
-          <p className="text-xl font-light text-white flex items-center flex-wrap">
-            2.5D Rear Panel I/O Visualizer <span className="text-[#a88d5e] text-sm ml-3 font-mono border border-[#a88d5e]/30 px-1.5 py-0.5 rounded-sm bg-[#a88d5e]/10">v2.5A</span>
-          </p>
-          <p className="text-[#666] text-xs mt-2 max-w-2xl font-mono">
-            // INTERACTIVE_SCHEMATIC: mapping power and data flow from peripherals & grid to workstation backend.
-          </p>
-        </div>
-
-        {/* Legend / Controls */}
-        <div className="flex gap-3 text-[10px] font-mono tracking-tighter uppercase items-center flex-wrap">
-          <button
-            onClick={() => setActiveLayer('all')}
-            className={`px-3 py-1.5 border transition-all ${activeLayer === 'all' ? 'border-[#d1d1d1] text-white bg-[#d1d1d1]/10' : 'border-[#333] text-[#666] hover:bg-[#1a1a1c]'}`}
-          >
-            All Connections
-          </button>
-          <button
-            onClick={() => setActiveLayer('power')}
-            className={`px-3 py-1.5 border transition-all flex items-center gap-2 ${activeLayer === 'power' ? 'border-[#f59e0b] text-[#f59e0b] bg-[#f59e0b]/10' : 'border-[#333] text-[#666] hover:bg-[#1a1a1c]'}`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${activeLayer === 'power' ? 'bg-[#f59e0b] shadow-[0_0_8px_#f59e0b]' : 'bg-[#444]'}`}></span> Power (AC)
-          </button>
-          <button
-            onClick={() => setActiveLayer('display')}
-            className={`px-3 py-1.5 border transition-all flex items-center gap-2 ${activeLayer === 'display' ? 'border-[#a88d5e] text-[#a88d5e] bg-[#a88d5e]/10' : 'border-[#333] text-[#666] hover:bg-[#1a1a1c]'}`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${activeLayer === 'display' ? 'bg-[#a88d5e] shadow-[0_0_8px_#a88d5e]' : 'bg-[#444]'}`}></span> HDMI Port
-          </button>
-          <button
-            onClick={() => setActiveLayer('data')}
-            className={`px-3 py-1.5 border transition-all flex items-center gap-2 ${activeLayer === 'data' ? 'border-[#3b82f6] text-[#3b82f6] bg-[#3b82f6]/10' : 'border-[#333] text-[#666] hover:bg-[#1a1a1c]'}`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${activeLayer === 'data' ? 'bg-[#3b82f6] shadow-[0_0_8px_#3b82f6]' : 'bg-[#444]'}`}></span> Data Link / USB
-          </button>
-        </div>
+      <header className="p-6 z-10 w-full absolute top-0 left-0 pointer-events-none">
+        <button onClick={onBack} className="pointer-events-auto text-slate-400 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors bg-[#0c0c0e]/80 px-4 py-2 rounded-full border border-[#1f1f23] backdrop-blur">
+          <ArrowLeft className="w-4 h-4" /> Back to Menu
+        </button>
       </header>
 
       {/* Diagram Canvas */}
@@ -735,7 +695,7 @@ export default function RearPanelView({ mode, onBack }: { mode: 'assembly' | 'di
               targetEnd={{ x: 300, y: 418 }}
               connectedControlPoints={[{ x: 1030, y: 500 }, { x: 300, y: 350 }]}
               disconnectedControlPoints={[{ x: 1000, y: 300 }, { x: 950, y: 300 }]}
-              color="#f59e0b" glowId="glowPower" width={4}
+              color="#ec4899" glowId="glowPower" width={4}
               isConnected={connections.monitorPower}
               isDragging={dragging === 'monitorPower'}
               dragPos={dragPos}
@@ -754,7 +714,7 @@ export default function RearPanelView({ mode, onBack }: { mode: 'assembly' | 'di
               targetEnd={{ x: 508, y: 280 }}
               connectedControlPoints={[{ x: 800, y: 350 }, { x: 600, y: 280 }]}
               disconnectedControlPoints={[{ x: 970, y: 350 }, { x: 920, y: 395 }]}
-              color="#a88d5e" glowId="glowDisplay" width={5}
+              color="#8b5cf6" glowId="glowDisplay" width={5}
               isConnected={connections.display}
               isDragging={dragging === 'display'}
               dragPos={dragPos}
@@ -861,10 +821,10 @@ export default function RearPanelView({ mode, onBack }: { mode: 'assembly' | 'di
                     : 'All cables have been safely disconnected from the rear panel.'}
                 </p>
                 <button 
-                  onClick={onBack}
+                  onClick={onNext || onBack}
                   className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-medium py-2 px-4 rounded-md transition-colors"
                 >
-                  Return to Menu
+                  {nextLabel || 'Return to Menu'}
                 </button>
               </div>
             </div>
