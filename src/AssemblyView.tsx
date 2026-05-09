@@ -42,6 +42,8 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
     eps: mode === 'disassembly',
     atx: mode === 'disassembly',
     sata: mode === 'disassembly',
+    sataPower: mode === 'disassembly',
+    fan: mode === 'disassembly',
   }));
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
@@ -66,17 +68,30 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
     if (mode === 'assembly') {
       if (id === 'cpuFan' && !installed['cpu']) return; // Must install CPU first
+      
+      if (id.startsWith('cable-')) {
+        const allComponentsInstalled = PC_COMPONENTS.every(c => installed[c.id]);
+        if (!allComponentsInstalled) {
+          setWarningMessage('Please install all physical components before connecting cables.');
+          return;
+        }
+      }
     } else {
+      const anyCableConnected = cables.eps || cables.atx || cables.sata || cables.sataPower || cables.fan;
+      if (!id.startsWith('cable-') && anyCableConnected) {
+        setWarningMessage('Please disconnect all cables before removing components.');
+        return;
+      }
+      if (id === 'cpuFan') {
+        const otherComponents = PC_COMPONENTS.filter(c => c.id !== 'cpuFan' && c.id !== 'cpu');
+        const anyOtherInstalled = otherComponents.some(c => installed[c.id]);
+        if (anyOtherInstalled) {
+          setWarningMessage('Please remove all other components before the CPU Fan.');
+          return;
+        }
+      }
       if (id === 'cpu' && installed['cpuFan']) {
         setWarningMessage('The CPU Cooler must be removed before the CPU.');
-        return;
-      }
-      if (id === 'psu' && (cables.eps || cables.atx)) {
-        setWarningMessage('Please disconnect the 4-pin and 24-pin cables before removing the Power Supply.');
-        return;
-      }
-      if (id === 'hdd' && cables.sata) {
-        setWarningMessage('Please disconnect the SATA cable before removing the HDD.');
         return;
       }
     }
@@ -86,6 +101,8 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
     if (id === 'cable-eps') setCables(prev => ({ ...prev, eps: false }));
     else if (id === 'cable-atx') setCables(prev => ({ ...prev, atx: false }));
     else if (id === 'cable-sata') setCables(prev => ({ ...prev, sata: false }));
+    else if (id === 'cable-sata-power') setCables(prev => ({ ...prev, sataPower: false }));
+    else if (id === 'cable-fan') setCables(prev => ({ ...prev, fan: false }));
     else if (installed[id]) setInstalled(prev => ({ ...prev, [id]: false }));
   };
 
@@ -110,6 +127,14 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
           if (Math.hypot(dragPos.x - 770, dragPos.y - 570) < 50) {
             setCables(prev => ({ ...prev, sata: true }));
           }
+        } else if (draggingId === 'cable-sata-power') {
+          if (Math.hypot(dragPos.x - 208, dragPos.y - 524) < 50) {
+            setCables(prev => ({ ...prev, sataPower: true }));
+          }
+        } else if (draggingId === 'cable-fan') {
+          if (Math.hypot(dragPos.x - 650, dragPos.y - 170) < 50) {
+            setCables(prev => ({ ...prev, fan: true }));
+          }
         } else {
           const component = PC_COMPONENTS.find(c => c.id === draggingId);
           if (component) {
@@ -126,6 +151,10 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
           if (dragPos.x > 750) setCables(prev => ({ ...prev, atx: false }));
         } else if (draggingId === 'cable-sata') {
           if (dragPos.x > 750) setCables(prev => ({ ...prev, sata: false }));
+        } else if (draggingId === 'cable-sata-power') {
+          if (dragPos.x > 750) setCables(prev => ({ ...prev, sataPower: false }));
+        } else if (draggingId === 'cable-fan') {
+          if (dragPos.x > 750) setCables(prev => ({ ...prev, fan: false }));
         }
 
         const component = PC_COMPONENTS.find(c => c.id === draggingId);
@@ -142,34 +171,57 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
   const allInstalled = PC_COMPONENTS.every(c => installed[c.id]);
   const isComplete = mode === 'assembly'
-    ? allInstalled && cables.eps && cables.atx && cables.sata
-    : Object.values(installed).every(val => !val) && !cables.eps && !cables.atx && !cables.sata;
+    ? allInstalled && cables.eps && cables.atx && cables.sata && cables.sataPower && cables.fan
+    : Object.values(installed).every(val => !val) && !cables.eps && !cables.atx && !cables.sata && !cables.sataPower && !cables.fan;
 
   const getTooltipContent = (id: string) => {
     if (id.startsWith('cable-')) {
       if (id === 'cable-eps') return { name: '4-Pin CPU Power', desc: 'Delivers dedicated power to the CPU.' };
       if (id === 'cable-atx') return { name: '24-Pin ATX Power', desc: 'Supplies main power to the motherboard and components.' };
       if (id === 'cable-sata') return { name: 'SATA Data Cable', desc: 'Transfers data between the motherboard and storage drives.' };
+      if (id === 'cable-sata-power') return { name: 'SATA Power Cable', desc: 'Provides power from the PSU to the storage drive.' };
+      if (id === 'cable-fan') return { name: '3-Pin Fan Power', desc: 'Connects the CPU Cooler to the motherboard.' };
       return { name: 'Cable', desc: 'Connects components.' };
     }
     const comp = PC_COMPONENTS.find(c => c.id === id);
     return { name: comp?.name || '', desc: comp?.description || '' };
   };
 
-  const isRemovable = (id: string) => {
-    if (mode !== 'disassembly') return false;
-    
-    if (id === 'cable-eps') return cables.eps;
-    if (id === 'cable-atx') return cables.atx;
-    if (id === 'cable-sata') return cables.sata;
+  const isInteractable = (id: string) => {
+    if (mode === 'disassembly') {
+      if (id === 'cable-eps') return cables.eps;
+      if (id === 'cable-atx') return cables.atx;
+      if (id === 'cable-sata') return cables.sata;
+      if (id === 'cable-sata-power') return cables.sataPower;
+      if (id === 'cable-fan') return cables.fan;
 
-    if (!installed[id as keyof typeof installed]) return false;
+      const anyCableConnected = cables.eps || cables.atx || cables.sata || cables.sataPower || cables.fan;
+      if (anyCableConnected) return false;
 
-    if (id === 'cpu') return !installed['cpuFan'];
-    if (id === 'psu') return !cables.eps && !cables.atx;
-    if (id === 'hdd') return !cables.sata;
-    
-    return true;
+      if (!installed[id]) return false;
+      if (id === 'cpu') return !installed['cpuFan'];
+      if (id === 'cpuFan') {
+        const otherComponents = PC_COMPONENTS.filter(c => c.id !== 'cpuFan' && c.id !== 'cpu');
+        return !otherComponents.some(c => installed[c.id]);
+      }
+      return true;
+    } else {
+      // Assembly Mode
+      if (id.startsWith('cable-')) {
+        const allComponentsInstalled = PC_COMPONENTS.every(c => installed[c.id]);
+        if (!allComponentsInstalled) return false;
+        if (id === 'cable-eps') return !cables.eps;
+        if (id === 'cable-atx') return !cables.atx;
+        if (id === 'cable-sata') return !cables.sata;
+        if (id === 'cable-sata-power') return !cables.sataPower;
+        if (id === 'cable-fan') return !cables.fan;
+        return false;
+      }
+      
+      if (installed[id]) return false;
+      if (id === 'cpuFan') return installed['cpu'];
+      return true;
+    }
   };
 
   if (powerOnStage === 'post' || powerOnStage === 'os') {
@@ -180,43 +232,43 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
   }
 
   return (
-    <div className="flex flex-col h-screen text-slate-300 w-full font-sans select-none overflow-hidden relative">
+    <div className="flex flex-col h-screen text-slate-800 w-full font-sans select-none overflow-hidden relative">
       {/* Grid Background */}
-      <div className="absolute inset-0 z-0 bg-[#080809]">
+      <div className="absolute inset-0 z-0 bg-[#f3f4f6]">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="assembly-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1f1f23" strokeWidth="1" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d1d5db" strokeWidth="1" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#assembly-grid)" />
         </svg>
       </div>
 
-      <header className="p-4 border-b border-[#1f1f23] flex items-center justify-between bg-[#080809]/80 backdrop-blur-md z-10 w-full relative">
+      <header className="p-4 border-b border-[#d1d5db] flex items-center justify-between bg-[#f3f4f6]/80 backdrop-blur-md z-10 w-full relative">
         <div className="flex items-center gap-4 w-1/3">
-          <div className="p-2 bg-[#1f1f23] rounded-md">
-            <Cpu className="w-6 h-6 text-emerald-500" />
+          <div className="p-2 bg-white rounded-md border border-slate-300">
+            <Cpu className="w-6 h-6 text-emerald-600" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-white tracking-tight">{mode === 'assembly' ? 'PC Assembly' : 'PC Disassembly'}</h1>
-            <p className="text-sm text-slate-500">{mode === 'assembly' ? 'Install the components onto the motherboard.' : 'Remove all components from the motherboard.'}</p>
+            <h1 className="text-xl font-semibold text-slate-900 tracking-tight">{mode === 'assembly' ? 'PC Assembly' : 'PC Disassembly'}</h1>
+            <p className="text-sm text-slate-600">{mode === 'assembly' ? 'Install the components onto the motherboard.' : 'Remove all components from the motherboard.'}</p>
           </div>
         </div>
 
         <div className="flex-1 flex justify-center items-center px-4 z-20">
-          {mode === 'assembly' && installed.hdd && !cables.sata && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-              Connect the SATA data cable from the HDD to the motherboard!
+          {mode === 'assembly' && !allInstalled && !warningMessage && (
+            <div className="px-4 py-2 bg-slate-500/10 border border-slate-500/30 rounded-full text-slate-600 text-sm font-semibold text-center shadow-[0_0_15px_rgba(100,116,139,0.1)]">
+              Step 1: Install all physical components from the tray
             </div>
           )}
-          {mode === 'assembly' && installed.psu && (!cables.eps || !cables.atx) && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-              Connect the 4-pin CPU power and 24-pin ATX power cables from the PSU!
+          {mode === 'assembly' && allInstalled && !isComplete && !warningMessage && (
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-600 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+              Step 2: Components installed! Now connect all power and data cables
             </div>
           )}
-          {mode === 'disassembly' && warningMessage && (
-            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+          {warningMessage && (
+            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-600 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.1)]">
               {warningMessage}
             </div>
           )}
@@ -225,7 +277,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
         <div className="flex items-center justify-end gap-4 w-1/3">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-[#1f1f23] rounded-md transition-colors border border-[#1f1f23]"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-white rounded-md transition-colors border border-slate-300"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Menu
           </button>
@@ -243,7 +295,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
           >
             {/* The PC Case / Chassis */}
             <g transform="translate(150, 50)">
-              <rect x="0" y="0" width="700" height="730" fill="#141415" stroke="#222" strokeWidth="4" rx="10" />
+              <rect x="0" y="0" width="700" height="730" fill="#708090" stroke="#222" strokeWidth="4" rx="10" />
               <rect x="20" y="20" width="660" height="690" fill="none" stroke="#1f1f23" strokeWidth="2" rx="4" />
               <text x="350" y="705" fill="#333" fontSize="24" fontFamily="monospace" textAnchor="middle" fontWeight="bold">ATX CHASSIS</text>
             </g>
@@ -252,20 +304,20 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
             {/* ATX Power Supply Bay */}
             <g transform="translate(200, 650)">
-              <rect x="-10" y="-10" width="140" height="120" fill={draggingId === 'psu' ? 'rgba(59,130,246,0.1)' : 'none'} stroke={draggingId === 'psu' ? '#3b82f6' : '#444'} strokeDasharray={draggingId === 'psu' ? 'none' : '4 4'} strokeWidth={draggingId === 'psu' ? '2' : '1'} rx="2" className={draggingId === 'psu' ? 'animate-pulse' : ''} />
-              <text x="60" y="-15" fill="#666" fontSize="12" fontFamily="monospace" textAnchor="middle">PSU BAY</text>
+              <rect x="-10" y="-10" width="140" height="120" fill={draggingId === 'psu' ? 'rgba(255, 255, 255, 0.1)' : 'none'} stroke={draggingId === 'psu' ? '#ffffff' : '#444'} strokeDasharray={draggingId === 'psu' ? 'none' : '4 4'} strokeWidth={draggingId === 'psu' ? '2' : '1'} rx="2" />
+              <text x="60" y="-15" fill="#0D0D0D" fontSize="14" fontFamily="monospace" textAnchor="middle">PSU BAY</text>
             </g>
 
             {/* HDD Bay Area */}
             <g transform="translate(180, 420)">
-              <rect x="-10" y="-10" width="100" height="130" fill={draggingId === 'hdd' ? 'rgba(59,130,246,0.1)' : 'none'} stroke={draggingId === 'hdd' ? '#3b82f6' : '#444'} strokeDasharray={draggingId === 'hdd' ? 'none' : '4 4'} strokeWidth={draggingId === 'hdd' ? '2' : '1'} rx="2" className={draggingId === 'hdd' ? 'animate-pulse' : ''} />
-              <text x="40" y="-15" fill="#666" fontSize="12" fontFamily="monospace" textAnchor="middle">DRIVE CAGE</text>
+              <rect x="-10" y="-10" width="100" height="130" fill={draggingId === 'hdd' ? 'rgba(255, 255, 255, 0.1)' : 'none'} stroke={draggingId === 'hdd' ? '#ffffff' : '#444'} strokeDasharray={draggingId === 'hdd' ? 'none' : '4 4'} strokeWidth={draggingId === 'hdd' ? '2' : '1'} rx="2" />
+              <text x="40" y="-15" fill="#0D0D0D" fontSize="14" fontFamily="monospace" textAnchor="middle">DRIVE CAGE</text>
             </g>
 
             {/* Motherboard (Standard ATX approx 305x244mm scaled) */}
             <g transform="translate(350, 150)">
               {/* Main PCB Base */}
-              <rect x="0" y="0" width="450" height="550" fill="#08080a" rx="4" />
+              <rect x="0" y="0" width="450" height="550" fill="#991b1b" rx="4" />
 
               {/* PCB Trace Patterns (More Realistic) */}
               <path d="M 20 180 L 100 180 L 120 200 L 120 300 M 430 450 L 350 450 L 330 430 L 330 350" fill="none" stroke="#1c1c22" strokeWidth="2" />
@@ -319,7 +371,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
               {/* CPU Socket Area (LGA Detail) */}
               <g transform="translate(160, 60)">
-                <rect x="0" y="0" width="100" height="100" fill={draggingId === 'cpu' || draggingId === 'cpuFan' ? 'rgba(59,130,246,0.1)' : '#18181b'} stroke={draggingId === 'cpu' || draggingId === 'cpuFan' ? '#3b82f6' : '#27272a'} strokeWidth="3" rx="4" className={draggingId === 'cpu' || draggingId === 'cpuFan' ? 'animate-pulse' : ''} />
+                <rect x="0" y="0" width="100" height="100" fill={draggingId === 'cpu' || draggingId === 'cpuFan' ? 'rgba(255, 255, 255, 0.1)' : '#18181b'} stroke={draggingId === 'cpu' || draggingId === 'cpuFan' ? '#ffffff' : '#27272a'} strokeWidth="3" rx="4" />
                 <rect x="5" y="5" width="90" height="90" fill="#000" stroke="#333" strokeWidth="2" rx="2" />
                 <rect x="15" y="15" width="70" height="70" fill="none" stroke="#666" strokeDasharray="1 1" />
                 {/* Retention Arm */}
@@ -329,9 +381,19 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
               </g>
               <text x="210" y="45" fill="#9ca3af" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">LGA 1700</text>
 
+              {/* CPU Fan Header */}
+              <g transform="translate(290, 15)">
+                <rect x="0" y="0" width="20" height="10" fill={draggingId === 'cable-fan' ? 'rgba(255, 255, 255, 0.2)' : '#1f1f23'} stroke={draggingId === 'cable-fan' ? '#ffffff' : '#444'} rx="1" />
+                <rect x="2" y="-2" width="16" height="4" fill="#444" rx="1" /> {/* Latch clip */}
+                <circle cx="5" cy="6" r="1.5" fill="#d1d5db" />
+                <circle cx="10" cy="6" r="1.5" fill="#d1d5db" />
+                <circle cx="15" cy="6" r="1.5" fill="#d1d5db" />
+              </g>
+              <text x="300" y="10" fill="#9ca3af" fontSize="6" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">CPU_FAN</text>
+
               {/* 4/8-pin CPU Power Connector */}
               <g transform="translate(100, 20)">
-                <rect x="0" y="0" width="30" height="15" fill={draggingId === 'cable-eps' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'cable-eps' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-eps' ? 'animate-pulse' : ''} />
+                <rect x="0" y="0" width="30" height="15" fill={draggingId === 'cable-eps' ? 'rgba(255, 255, 255, 0.2)' : '#1f1f23'} stroke={draggingId === 'cable-eps' ? '#ffffff' : '#444'} rx="1" />
                 <rect x="2" y="2" width="12" height="11" fill="#000" rx="1" />
                 <rect x="16" y="2" width="12" height="11" fill="#000" rx="1" />
                 <circle cx="8" cy="7.5" r="2" fill="#f87171" />
@@ -342,8 +404,8 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
               {/* RAM Slots (DIMM) */}
               <g transform="translate(300, 50)">
-                <rect x="0" y="0" width="12" height="140" fill={draggingId === 'ram1' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'ram1' ? '#3b82f6' : '#27272a'} rx="1" className={draggingId === 'ram1' ? 'animate-pulse' : ''} />
-                <rect x="25" y="0" width="12" height="140" fill={draggingId === 'ram2' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'ram2' ? '#3b82f6' : '#27272a'} rx="1" className={draggingId === 'ram2' ? 'animate-pulse' : ''} />
+                <rect x="0" y="0" width="12" height="140" fill={draggingId === 'ram1' ? 'rgba(255, 255, 255, 0.2)' : '#18181b'} stroke={draggingId === 'ram1' ? '#ffffff' : '#27272a'} rx="1" />
+                <rect x="25" y="0" width="12" height="140" fill={draggingId === 'ram2' ? 'rgba(255, 255, 255, 0.2)' : '#18181b'} stroke={draggingId === 'ram2' ? '#ffffff' : '#27272a'} rx="1" />
                 {/* Channel A / Channel B colored slots */}
                 <rect x="2" y="5" width="8" height="130" fill="#0a0a0b" />
                 <rect x="27" y="5" width="8" height="130" fill="#0a0a0b" />
@@ -356,7 +418,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
               {/* 24-pin ATX Power Connector */}
               <g transform="translate(400, 200)">
-                <rect x="0" y="0" width="20" height="80" fill={draggingId === 'cable-atx' ? 'rgba(59,130,246,0.2)' : '#1f1f23'} stroke={draggingId === 'cable-atx' ? '#3b82f6' : '#444'} rx="1" className={draggingId === 'cable-atx' ? 'animate-pulse' : ''} />
+                <rect x="0" y="0" width="20" height="80" fill={draggingId === 'cable-atx' ? 'rgba(255, 255, 255, 0.2)' : '#1f1f23'} stroke={draggingId === 'cable-atx' ? '#ffffff' : '#444'} rx="1" />
                 {Array.from({ length: 12 }).map((_, i) => (
                   <rect key={`atx1-${i}`} x="2" y={2 + i * 6.5} width="7" height="4.5" fill="#000" rx="0.5" />
                 ))}
@@ -369,7 +431,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
               {/* M.2 NVMe Slot(s) */}
               <g transform="translate(180, 190)">
-                <rect x="0" y="0" width="90" height="15" fill={draggingId === 'nvme' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'nvme' ? '#3b82f6' : '#27272a'} rx="1" className={draggingId === 'nvme' ? 'animate-pulse' : ''} />
+                <rect x="0" y="0" width="90" height="15" fill={draggingId === 'nvme' ? 'rgba(255, 255, 255, 0.2)' : '#18181b'} stroke={draggingId === 'nvme' ? '#ffffff' : '#27272a'} rx="1" />
                 <rect x="-5" y="0" width="10" height="15" fill="#111" rx="1" stroke="#333" /> {/* M.2 connector */}
                 {/* Stand-offs */}
                 <circle cx="30" cy="7.5" r="2" fill="#d1d5db" />
@@ -380,7 +442,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
               {/* PCIe x16 Slot (GPU) */}
               <g transform="translate(80, 370)">
-                <rect x="0" y="0" width="260" height="15" fill={draggingId === 'gpu' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'gpu' ? '#3b82f6' : '#27272a'} strokeWidth="2" rx="2" className={draggingId === 'gpu' ? 'animate-pulse' : ''} />
+                <rect x="0" y="0" width="260" height="15" fill={draggingId === 'gpu' ? 'rgba(255, 255, 255, 0.2)' : '#18181b'} stroke={draggingId === 'gpu' ? '#ffffff' : '#27272a'} strokeWidth="2" rx="2" />
                 <rect x="0" y="-1" width="260" height="17" fill="none" stroke="#d1d5db" strokeWidth="1" rx="2" /> {/* Steel armor */}
                 <rect x="2" y="2" width="60" height="11" fill="#000" />
                 <rect x="64" y="2" width="194" height="11" fill="#000" />
@@ -396,8 +458,8 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
               {/* SATA Ports */}
               <g transform="translate(410, 420)">
-                <rect x="0" y="0" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'cable-sata' ? '#3b82f6' : '#333'} rx="1" className={draggingId === 'cable-sata' ? 'animate-pulse' : ''} />
-                <rect x="0" y="15" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(59,130,246,0.2)' : '#18181b'} stroke={draggingId === 'cable-sata' ? '#3b82f6' : '#333'} rx="1" className={draggingId === 'cable-sata' ? 'animate-pulse' : ''} />
+                <rect x="0" y="0" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(255, 255, 255, 0.2)' : '#18181b'} stroke={draggingId === 'cable-sata' ? '#ffffff' : '#333'} rx="1" />
+                <rect x="0" y="15" width="15" height="10" fill={draggingId === 'cable-sata' ? 'rgba(255, 255, 255, 0.2)' : '#18181b'} stroke={draggingId === 'cable-sata' ? '#ffffff' : '#333'} rx="1" />
                 <rect x="20" y="0" width="15" height="10" fill="#18181b" stroke="#333" rx="1" />
                 <rect x="20" y="15" width="15" height="10" fill="#18181b" stroke="#333" rx="1" />
                 {/* L-Shape connectors inside */}
@@ -451,73 +513,6 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
               </g>
             </g>
 
-            {/* Render Cables if PSU is installed */}
-            {installed['psu'] && (
-              <g>
-                {/* EPS 4-pin Cable */}
-                {(!chassisClosed || cables.eps) && (
-                  <g>
-                    <path
-                      d={`M 320 670 Q 350 400 ${cables.eps ? '465 177' : (draggingId === 'cable-eps' ? `${dragPos.x} ${dragPos.y}` : '340 600')}`}
-                      fill="none" stroke="#f87171" strokeWidth="6" strokeLinecap="round"
-                    />
-                    <motion.g
-                      animate={{ x: cables.eps ? 465 : (draggingId === 'cable-eps' ? dragPos.x : 340), y: cables.eps ? 177 : (draggingId === 'cable-eps' ? dragPos.y : 600) }}
-                      onPointerDown={(e: any) => handlePointerDown('cable-eps', e)}
-                      style={{ cursor: draggingId === 'cable-eps' ? 'grabbing' : 'grab' }}
-                      className={isRemovable('cable-eps') ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
-                    >
-                      <rect x="-15" y="-10" width="30" height="20" fill="#0f172a" stroke="#f87171" rx="2" />
-                      <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle">4-PIN</text>
-                    </motion.g>
-                  </g>
-                )}
-
-                {/* ATX 24-pin Cable */}
-                {(!chassisClosed || cables.atx) && (
-                  <g>
-                    <path
-                      d={`M 345 685 Q 550 650 ${cables.atx ? '760 390' : (draggingId === 'cable-atx' ? `${dragPos.x} ${dragPos.y}` : '380 620')}`}
-                      fill="none" stroke="#facc15" strokeWidth="8" strokeLinecap="round"
-                    />
-                    <motion.g
-                      animate={{ x: cables.atx ? 760 : (draggingId === 'cable-atx' ? dragPos.x : 380), y: cables.atx ? 390 : (draggingId === 'cable-atx' ? dragPos.y : 620) }}
-                      onPointerDown={(e: any) => handlePointerDown('cable-atx', e)}
-                      style={{ cursor: draggingId === 'cable-atx' ? 'grabbing' : 'grab' }}
-                      className={isRemovable('cable-atx') ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
-                    >
-                      <rect x="-10" y="-40" width="20" height="80" fill="#0f172a" stroke="#facc15" rx="2" />
-                      <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle" transform="rotate(-90 0 0)">24-PIN ATX</text>
-                    </motion.g>
-                  </g>
-                )}
-              </g>
-            )}
-
-            {/* Render Cables if HDD is installed */}
-            {installed['hdd'] && (
-              <g>
-                {/* SATA Cable */}
-                {(!chassisClosed || cables.sata) && (
-                  <g>
-                    <path
-                      d={`M 240 470 Q 400 650 ${cables.sata ? '770 570' : (draggingId === 'cable-sata' ? `${dragPos.x} ${dragPos.y}` : '300 550')}`}
-                      fill="none" stroke="#ef4444" strokeWidth="4" strokeLinecap="round"
-                    />
-                    <motion.g
-                      animate={{ x: cables.sata ? 770 : (draggingId === 'cable-sata' ? dragPos.x : 300), y: cables.sata ? 570 : (draggingId === 'cable-sata' ? dragPos.y : 550) }}
-                      onPointerDown={(e: any) => handlePointerDown('cable-sata', e)}
-                      style={{ cursor: draggingId === 'cable-sata' ? 'grabbing' : 'grab' }}
-                      className={isRemovable('cable-sata') ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
-                    >
-                      <rect x="-10" y="-5" width="20" height="10" fill="#0f172a" stroke="#ef4444" rx="1" />
-                      <text x="0" y="2" fill="#fff" fontSize="6" fontFamily="sans-serif" textAnchor="middle">SATA</text>
-                    </motion.g>
-                  </g>
-                )}
-              </g>
-            )}
-
             {/* Render Components */}
             {PC_COMPONENTS.map((comp) => {
               // Hide components if they are on the workbench but the workbench is hidden (chassis is closed)
@@ -536,7 +531,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                   transition={{ type: isDragging ? "tween" : "spring", duration: isDragging ? 0 : 0.3 }}
                   style={{ cursor: (mode === 'assembly' && comp.id === 'cpuFan' && !installed['cpu']) || (mode === 'disassembly' && comp.id === 'cpu' && installed['cpuFan']) ? 'not-allowed' : (isDragging ? 'grabbing' : 'grab') }}
                   onPointerDown={(e: any) => handlePointerDown(comp.id, e)}
-                  className={isRemovable(comp.id) ? 'animate-pulse drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]' : ''}
+                  className={isInteractable(comp.id) ? 'drop-shadow-[0_0_8px_rgba(255, 255, 255, 0.8)]' : ''}
                 >
                   {/* Drop Shadow when dragging */}
                   {isDragging && <rect x={5} y={10} width={comp.width} height={comp.height} fill="rgba(0,0,0,0.5)" rx="4" />}
@@ -572,7 +567,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                       </g>
                       <circle cx="45" cy="45" r="8" fill="#1e293b" />
                       {isInstalled && cables.eps && cables.atx ? (
-                        <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="6" className="animate-pulse" />
+                        <circle cx="45" cy="45" r="38" fill="none" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="6" />
                       ) : null}
                     </g>
                   )}
@@ -632,14 +627,136 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                       <circle cx="40" cy="40" r="25" fill="#94a3b8" />
                       <circle cx="40" cy="40" r="10" fill="#cbd5e1" />
                       <path d="M 40 40 L 60 20" stroke="#cbd5e1" strokeWidth="2" />
-                      <rect x="10" y="95" width="60" height="10" fill="#1e293b" rx="1" />
-                      <text x="40" y="102" fill="#fff" fontSize="6" fontFamily="sans-serif" textAnchor="middle">2TB SATA</text>
+
+                      {/* Connector Block at bottom */}
+                      <rect x="10" y="90" width="60" height="20" fill="#1e293b" rx="1" />
+                      <text x="40" y="100" fill="#94a3b8" fontSize="6" fontFamily="sans-serif" textAnchor="middle">2TB SATA</text>
+
+                      {/* SATA Power Port (Wider) */}
+                      <rect x="15" y="104" width="26" height="6" fill="#0f172a" rx="0.5" />
+                      <path d="M 18 105 L 18 109 M 38 105 L 38 109" stroke="#facc15" strokeWidth="0.5" />
+                      <text x="28" y="108" fill="#475569" fontSize="4" fontFamily="sans-serif" textAnchor="middle">PWR</text>
+
+                      {/* SATA Data Port (Narrower) */}
+                      <rect x="45" y="104" width="18" height="6" fill="#0f172a" rx="0.5" />
+                      <path d="M 48 105 L 48 109 M 60 105 L 60 109" stroke="#facc15" strokeWidth="0.5" />
+                      <text x="54" y="108" fill="#475569" fontSize="4" fontFamily="sans-serif" textAnchor="middle">DATA</text>
                     </g>
                   )}
 
                 </motion.g>
               );
             })}
+
+            {/* Render Cables on top of components */}
+            {installed['psu'] && (
+              <g>
+                {/* EPS 4-pin Cable */}
+                {(!chassisClosed || cables.eps) && (
+                  <g>
+                    <path
+                      d={`M 320 670 Q 350 400 ${cables.eps ? '465 177' : (draggingId === 'cable-eps' ? `${dragPos.x} ${dragPos.y}` : '340 600')}`}
+                      fill="none" stroke="#f87171" strokeWidth="6" strokeLinecap="round"
+                    />
+                    <motion.g
+                      animate={{ x: cables.eps ? 465 : (draggingId === 'cable-eps' ? dragPos.x : 340), y: cables.eps ? 177 : (draggingId === 'cable-eps' ? dragPos.y : 600) }}
+                      onPointerDown={(e: any) => handlePointerDown('cable-eps', e)}
+                      style={{ cursor: draggingId === 'cable-eps' ? 'grabbing' : 'grab' }}
+                      className={isInteractable('cable-eps') ? 'drop-shadow-[0_0_8px_rgba(255, 255, 255, 0.8)]' : ''}
+                    >
+                      <rect x="-15" y="-10" width="30" height="20" fill="#0f172a" stroke="#f87171" rx="2" />
+                      <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle">4-PIN</text>
+                    </motion.g>
+                  </g>
+                )}
+
+                {/* ATX 24-pin Cable */}
+                {(!chassisClosed || cables.atx) && (
+                  <g>
+                    <path
+                      d={`M 345 685 Q 550 650 ${cables.atx ? '760 390' : (draggingId === 'cable-atx' ? `${dragPos.x} ${dragPos.y}` : '380 620')}`}
+                      fill="none" stroke="#facc15" strokeWidth="8" strokeLinecap="round"
+                    />
+                    <motion.g
+                      animate={{ x: cables.atx ? 760 : (draggingId === 'cable-atx' ? dragPos.x : 380), y: cables.atx ? 390 : (draggingId === 'cable-atx' ? dragPos.y : 620) }}
+                      onPointerDown={(e: any) => handlePointerDown('cable-atx', e)}
+                      style={{ cursor: draggingId === 'cable-atx' ? 'grabbing' : 'grab' }}
+                      className={isInteractable('cable-atx') ? 'drop-shadow-[0_0_8px_rgba(255, 255, 255, 0.8)]' : ''}
+                    >
+                      <rect x="-10" y="-40" width="20" height="80" fill="#0f172a" stroke="#facc15" rx="2" />
+                      <text x="0" y="3" fill="#fff" fontSize="8" fontFamily="sans-serif" textAnchor="middle" transform="rotate(-90 0 0)">24-PIN ATX</text>
+                    </motion.g>
+                  </g>
+                )}
+
+                {/* SATA Power Cable */}
+                {(!chassisClosed || cables.sataPower) && (
+                  <g>
+                    <path
+                      d={`M 320 700 Q 250 550 ${cables.sataPower ? '208 524' : (draggingId === 'cable-sata-power' ? `${dragPos.x} ${dragPos.y}` : '360 600')}`}
+                      fill="none" stroke="#64748b" strokeWidth="6" strokeLinecap="round"
+                    />
+                    <motion.g
+                      animate={{ x: cables.sataPower ? 208 : (draggingId === 'cable-sata-power' ? dragPos.x : 360), y: cables.sataPower ? 524 : (draggingId === 'cable-sata-power' ? dragPos.y : 600) }}
+                      onPointerDown={(e: any) => handlePointerDown('cable-sata-power', e)}
+                      style={{ cursor: draggingId === 'cable-sata-power' ? 'grabbing' : 'grab' }}
+                      className={isInteractable('cable-sata-power') ? 'drop-shadow-[0_0_8px_rgba(255, 255, 255, 0.8)]' : ''}
+                    >
+                      <rect x="-15" y="-5" width="30" height="10" fill="#0f172a" stroke="#64748b" rx="1" />
+                      <text x="0" y="2" fill="#fff" fontSize="6" fontFamily="sans-serif" textAnchor="middle">SATA PWR</text>
+                    </motion.g>
+                  </g>
+                )}
+              </g>
+            )}
+
+            {/* Render Cables if HDD is installed */}
+            {installed['hdd'] && (
+              <g>
+                {/* SATA Cable */}
+                {(!chassisClosed || cables.sata) && (
+                  <g>
+                    <path
+                      d={`M 234 524 Q 400 650 ${cables.sata ? '770 570' : (draggingId === 'cable-sata' ? `${dragPos.x} ${dragPos.y}` : '300 550')}`}
+                      fill="none" stroke="#ef4444" strokeWidth="4" strokeLinecap="round"
+                    />
+                    <motion.g
+                      animate={{ x: cables.sata ? 770 : (draggingId === 'cable-sata' ? dragPos.x : 300), y: cables.sata ? 570 : (draggingId === 'cable-sata' ? dragPos.y : 550) }}
+                      onPointerDown={(e: any) => handlePointerDown('cable-sata', e)}
+                      style={{ cursor: draggingId === 'cable-sata' ? 'grabbing' : 'grab' }}
+                      className={isInteractable('cable-sata') ? 'drop-shadow-[0_0_8px_rgba(255, 255, 255, 0.8)]' : ''}
+                    >
+                      <rect x="-10" y="-5" width="20" height="10" fill="#0f172a" stroke="#ef4444" rx="1" />
+                      <text x="0" y="2" fill="#fff" fontSize="6" fontFamily="sans-serif" textAnchor="middle">SATA</text>
+                    </motion.g>
+                  </g>
+                )}
+              </g>
+            )}
+
+            {/* Render Fan Cable if CPU Fan is installed */}
+            {installed['cpuFan'] && (
+              <g>
+                {/* Fan Power Cable */}
+                {(!chassisClosed || cables.fan) && (
+                  <g>
+                    <path
+                      d={`M 560 215 Q 600 150 ${cables.fan ? '650 170' : (draggingId === 'cable-fan' ? `${dragPos.x} ${dragPos.y}` : '560 180')}`}
+                      fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round"
+                    />
+                    <motion.g
+                      animate={{ x: cables.fan ? 650 : (draggingId === 'cable-fan' ? dragPos.x : 560), y: cables.fan ? 170 : (draggingId === 'cable-fan' ? dragPos.y : 180) }}
+                      onPointerDown={(e: any) => handlePointerDown('cable-fan', e)}
+                      style={{ cursor: draggingId === 'cable-fan' ? 'grabbing' : 'grab' }}
+                      className={isInteractable('cable-fan') ? 'drop-shadow-[0_0_8px_rgba(255, 255, 255, 0.8)]' : ''}
+                    >
+                      <rect x="-10" y="-5" width="20" height="10" fill="#0f172a" stroke="#3b82f6" rx="1" />
+                      <text x="0" y="2" fill="#fff" fontSize="6" fontFamily="sans-serif" textAnchor="middle">3-PIN</text>
+                    </motion.g>
+                  </g>
+                )}
+              </g>
+            )}
 
             {/* Tooltip for dragging item */}
             <AnimatePresence>

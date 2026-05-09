@@ -161,22 +161,7 @@ const DraggableCable = ({
       )}
       <circle cx={start.x} cy={start.y} r={width * 1.5} fill="#0a0a0b" stroke={color} strokeWidth={1.5} />
       
-      {/* Target Hint Indicator */}
-      {!isConnected && !isDragging && (
-        <g className="animate-pulse pointer-events-none">
-          <circle cx={targetEnd.x} cy={targetEnd.y} r="12" fill="transparent" stroke={color} strokeWidth="2" strokeDasharray="4 4" />
-          <text x={targetEnd.x} y={targetEnd.y + 25} textAnchor="middle" fill={color} fontSize="10" fontFamily="monospace">
-            {label}
-          </text>
-        </g>
-      )}
-      
-      {/* Dragging visual cue on target */}
-      {isDragging && (
-        <g className="pointer-events-none">
-           <circle cx={targetEnd.x} cy={targetEnd.y} r="16" fill="transparent" stroke={color} strokeWidth="2" strokeDasharray="4 4" />
-        </g>
-      )}
+      {/* Removed Target Hint Indicator and Dragging visual cue per user request */}
 
       {/* Draggable End */}
       <motion.g 
@@ -234,7 +219,7 @@ const DraggableCable = ({
           </g>
         )}
         {/* Glow when connected */}
-        {isConnected && <circle r="20" fill="transparent" stroke={color} strokeWidth="1" strokeDasharray="4" className="animate-[spin_4s_linear_infinite]" opacity={0.5} />}
+        {/* Removed spinning circle highlight per user request */}
       </motion.g>
     </g>
   );
@@ -403,7 +388,10 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               colors={{ front: "#222", top: "#333", side: "#1a1a1c", stroke: "#444" }}
             >
               {/* Inner Outlet area */}
-              <rect x="75" y="140" width="40" height="60" rx="4" fill="#0a0a0b" stroke="#333" strokeWidth="1" />
+              <rect x="75" y="140" width="40" height="60" rx="4" fill="#0a0a0b" stroke={dragging === 'avrPower' ? "#ffffff" : "#333"} strokeWidth={dragging === 'avrPower' ? 2 : 1} />
+              {dragging === 'avrPower' && (
+                <rect x="73" y="138" width="44" height="64" fill="transparent" stroke="#ffffff" strokeWidth={2} rx="4" />
+              )}
               {/* Three pin holes */}
               <circle cx="88" cy="155" r="3" fill="#000" />
               <circle cx="102" cy="155" r="3" fill="#000" />
@@ -431,8 +419,21 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
             <polygon points="180,418 190,408 210,408 200,418" fill="#0a0a0b" stroke="#000" strokeWidth="1" />
             <text x="195" y="432" textAnchor="middle" fill="#666" fontSize="8" fontFamily="monospace" transform="skewX(-45)">IN</text>
 
-            <polygon points="230,418 240,408 260,408 250,418" fill="#0a0a0b" stroke="#000" strokeWidth="1" />
-            <polygon points="280,418 290,408 310,408 300,418" fill="#0a0a0b" stroke="#000" strokeWidth="1" />
+            {/* AVR Output 1 (PC Power) */}
+            <g>
+              <polygon points="230,418 240,408 260,408 250,418" fill="#0a0a0b" stroke={dragging === 'pcPower' ? "#ffffff" : "#000"} strokeWidth={dragging === 'pcPower' ? 2 : 1} />
+              {dragging === 'pcPower' && (
+                <polygon points="228,420 239,406 262,406 252,420" fill="transparent" stroke="#ffffff" strokeWidth={2} />
+              )}
+            </g>
+
+            {/* AVR Output 2 (Monitor Power) */}
+            <g>
+              <polygon points="280,418 290,408 310,408 300,418" fill="#0a0a0b" stroke={dragging === 'monitorPower' ? "#ffffff" : "#000"} strokeWidth={dragging === 'monitorPower' ? 2 : 1} />
+              {dragging === 'monitorPower' && (
+                <polygon points="278,420 289,406 312,406 302,420" fill="transparent" stroke="#ffffff" strokeWidth={2} />
+              )}
+            </g>
             <text x="210" y="560" textAnchor="middle" fill="#a88d5e" fontSize="10" fontFamily="monospace" fontWeight="bold">AVR-PRO</text>
           </g>
 
@@ -451,9 +452,9 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               <path d="M 610 120 L 610 190 M 575 155 L 645 155 M 585 130 L 635 180 M 585 180 L 635 130" stroke="#333" strokeWidth="2" />
 
               {/* Power Connector */}
-              <rect x="505" y="140" width="36" height="24" fill="#0a0a0b" stroke={dragging === 'pcPower' ? "#f59e0b" : "#444"} strokeWidth={dragging === 'pcPower' ? 2 : 1} rx="2" />
+              <rect x="505" y="140" width="36" height="24" fill="#0a0a0b" stroke={dragging === 'pcPower' ? "#ffffff" : "#444"} strokeWidth={dragging === 'pcPower' ? 2 : 1} rx="2" />
               {dragging === 'pcPower' && (
-                <rect x="505" y="140" width="36" height="24" fill="#f59e0b" opacity="0.3" rx="2" className="animate-pulse" />
+                <rect x="505" y="140" width="36" height="24" fill="#ffffff" opacity="0.3" rx="2" />
               )}
               <rect x="510" y="145" width="26" height="14" fill="#000" rx="1" />
               <rect x="515" y="148" width="16" height="4" fill="#333" />
@@ -465,13 +466,13 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               <rect x="490" y="210" width="65" height="175" fill="#202020" stroke="#444" rx="2" />
               
               {/* Keyboard & Mouse Rectangular Ports */}
-              <rect x="497" y="222" width="22" height="18" fill="#8b5cf6" stroke={dragging === 'keyboard' ? "#3b82f6" : "#4c1d95"} strokeWidth={dragging === 'keyboard' ? 2 : 1} rx="2" />
+              <rect x="497" y="222" width="22" height="18" fill="#8b5cf6" stroke={dragging === 'keyboard' ? "#ffffff" : "#4c1d95"} strokeWidth={dragging === 'keyboard' ? 2 : 1} rx="2" />
               {dragging === 'keyboard' && (
-                 <rect x="495" y="220" width="26" height="22" fill="transparent" stroke="#3b82f6" strokeWidth={2} rx="2" className="animate-pulse" />
+                 <rect x="495" y="220" width="26" height="22" fill="transparent" stroke="#ffffff" strokeWidth={2} rx="2" />
               )}
-              <rect x="525" y="222" width="22" height="18" fill="#10b981" stroke={dragging === 'mouse' ? "#3b82f6" : "#047857"} strokeWidth={dragging === 'mouse' ? 2 : 1} rx="2" />
+              <rect x="525" y="222" width="22" height="18" fill="#10b981" stroke={dragging === 'mouse' ? "#ffffff" : "#047857"} strokeWidth={dragging === 'mouse' ? 2 : 1} rx="2" />
               {dragging === 'mouse' && (
-                 <rect x="523" y="220" width="26" height="22" fill="transparent" stroke="#3b82f6" strokeWidth={2} rx="2" className="animate-pulse" />
+                 <rect x="523" y="220" width="26" height="22" fill="transparent" stroke="#ffffff" strokeWidth={2} rx="2" />
               )}
               <rect x="502" y="228" width="12" height="6" fill="#000" />
               <rect x="530" y="228" width="12" height="6" fill="#000" />
@@ -480,9 +481,9 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               <path d="M 496 255 L 518 255 L 514 265 L 500 265 Z" fill="#0d9488" stroke="#0f766e" />
               
               {/* Display/HDMI Port */}
-              <path d="M 498 276 L 518 276 L 518 282 L 515 285 L 501 285 L 498 282 Z" fill="#3b82f6" stroke={dragging === 'display' ? "#a88d5e" : "#1d4ed8"} strokeWidth={dragging === 'display' ? 2 : 1} />
+              <path d="M 498 276 L 518 276 L 518 282 L 515 285 L 501 285 L 498 282 Z" fill="#3b82f6" stroke={dragging === 'display' ? "#ffffff" : "#1d4ed8"} strokeWidth={dragging === 'display' ? 2 : 1} />
               {dragging === 'display' && (
-                 <path d="M 496 274 L 520 274 L 520 283 L 516 287 L 500 287 L 496 283 Z" fill="transparent" stroke="#a88d5e" strokeWidth={2} className="animate-pulse" />
+                 <path d="M 496 274 L 520 274 L 520 283 L 516 287 L 500 287 L 496 283 Z" fill="transparent" stroke="#ffffff" strokeWidth={2} />
               )}
 
               {/* Parallel Port (Pink-ish) next to Serial */}
