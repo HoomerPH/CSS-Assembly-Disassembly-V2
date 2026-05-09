@@ -245,7 +245,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
         </svg>
       </div>
 
-      <header className="p-4 border-b border-[#1f1f23] flex items-center justify-between bg-[#080809]/80 backdrop-blur-md z-10 w-full relative">
+      <header className="p-4 border-b border-[#1f1f23] flex items-center justify-between bg-[#B2BEB5]/80 backdrop-blur-md z-10 w-full relative">
         <div className="flex items-center gap-4 w-1/3">
           <div className="p-2 bg-[#1f1f23] rounded-md">
             <Cpu className="w-6 h-6 text-emerald-500" />
@@ -277,7 +277,7 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
         <div className="flex items-center justify-end gap-4 w-full md:w-1/3">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-[#1f1f23] rounded-md transition-colors border border-[#1f1f23]"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-[#eaf0f4] rounded-md transition-colors border border-[#1f1f23]"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Menu
           </button>
@@ -633,12 +633,24 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                       <text x="40" y="100" fill="#94a3b8" fontSize="6" fontFamily="sans-serif" textAnchor="middle">2TB SATA</text>
 
                       {/* SATA Power Port (Wider) */}
-                      <rect x="15" y="104" width="26" height="6" fill="#0f172a" rx="0.5" />
+                      <rect 
+                        x="15" y="104" width="26" height="6" 
+                        fill={draggingId === 'cable-sata-power' ? 'rgba(255, 255, 255, 0.2)' : '#0f172a'} 
+                        stroke={draggingId === 'cable-sata-power' ? '#ffffff' : 'none'}
+                        strokeWidth={draggingId === 'cable-sata-power' ? 1 : 0}
+                        rx="0.5" 
+                      />
                       <path d="M 18 105 L 18 109 M 38 105 L 38 109" stroke="#facc15" strokeWidth="0.5" />
                       <text x="28" y="108" fill="#475569" fontSize="4" fontFamily="sans-serif" textAnchor="middle">PWR</text>
 
                       {/* SATA Data Port (Narrower) */}
-                      <rect x="45" y="104" width="18" height="6" fill="#0f172a" rx="0.5" />
+                      <rect 
+                        x="45" y="104" width="18" height="6" 
+                        fill={draggingId === 'cable-sata' ? 'rgba(255, 255, 255, 0.2)' : '#0f172a'} 
+                        stroke={draggingId === 'cable-sata' ? '#ffffff' : 'none'}
+                        strokeWidth={draggingId === 'cable-sata' ? 1 : 0}
+                        rx="0.5" 
+                      />
                       <path d="M 48 105 L 48 109 M 60 105 L 60 109" stroke="#facc15" strokeWidth="0.5" />
                       <text x="54" y="108" fill="#475569" fontSize="4" fontFamily="sans-serif" textAnchor="middle">DATA</text>
                     </g>
