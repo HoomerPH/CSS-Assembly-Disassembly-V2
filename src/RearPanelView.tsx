@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Monitor, Cpu, Keyboard, Mouse, Plug, MousePointer2, Info, CheckCircle2, ArrowLeft } from 'lucide-react';
 
@@ -236,6 +236,9 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
     avrPower: mode === 'disassembly',
     monitorPower: mode === 'disassembly',
   });
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
@@ -251,13 +254,28 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
 
   const handlePointerDown = (id: string, e: React.PointerEvent) => {
     e.stopPropagation();
-    
-    // In assembly mode, you should probably be able to grab anything disconnected.
-    // In disassembly mode, you shouldn't be able to remove AVR Power if Monitor Power & PC Power are connected to it.
-    if (mode === 'disassembly') {
-      if (id === 'avrPower' && (connections.pcPower || connections.monitorPower)) return;
+    setWarningMessage(null);
+
+    if (mode === 'assembly') {
+      // AVR Power must be the last cable connected — all others must be done first
+      if (id === 'avrPower' && !connections.avrPower) {
+        const othersConnected = connections.keyboard && connections.mouse &&
+          connections.display && connections.pcPower && connections.monitorPower;
+        if (!othersConnected) {
+          setWarningMessage('Connect all other cables first before plugging in the AVR Power!');
+          return;
+        }
+      }
     }
-    
+
+    if (mode === 'disassembly') {
+      // Cannot remove AVR Power if devices are still connected to it
+      if (id === 'avrPower' && (connections.pcPower || connections.monitorPower)) {
+        setWarningMessage('Disconnect PC Power and Monitor Power from the AVR first!');
+        return;
+      }
+    }
+
     setDragging(id);
     setDragPos(getSVGPoint(e));
     if (connections[id as keyof typeof connections]) {
@@ -311,9 +329,38 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
     }
   };
 
-  const isComplete = mode === 'assembly' 
+  const isComplete = mode === 'assembly'
     ? Object.values(connections).every(Boolean)
     : Object.values(connections).every(val => !val);
+
+  // Auto-proceed after completion in assembly mode (with 3-second countdown)
+  useEffect(() => {
+    if (isComplete && mode === 'assembly' && onNext) {
+      setCountdown(3);
+      countdownRef.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev === null || prev <= 1) {
+            clearInterval(countdownRef.current!);
+            onNext();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isComplete]);
+
+  // Auto-dismiss warning messages after 3 seconds
+  useEffect(() => {
+    if (warningMessage) {
+      const t = setTimeout(() => setWarningMessage(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [warningMessage]);
 
   return (
     <div className="min-h-screen bg-[#0c0c0e] text-[#d1d1d1] font-sans flex flex-col relative overflow-hidden">
@@ -398,6 +445,12 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               <rect x="91" y="165" width="8" height="6" rx="2" fill="#000" />
             </ObliqueBox>
             <text x="95" y="105" textAnchor="middle" fill="#666" fontSize="10" fontFamily="monospace" fontWeight="bold">MAIN AC</text>
+            {mode === 'assembly' && !connections.avrPower && !(connections.keyboard && connections.mouse && connections.display && connections.pcPower && connections.monitorPower) && (
+              <g>
+                <rect x="50" y="222" width="90" height="16" rx="3" fill="#7c2d12" stroke="#dc2626" strokeWidth="1" />
+                <text x="95" y="233" textAnchor="middle" fill="#fca5a5" fontSize="8" fontFamily="monospace" fontWeight="bold">CONNECT LAST</text>
+              </g>
+            )}
           </g>
 
           {/* AVR (Automatic Voltage Regulator) */}
@@ -681,8 +734,21 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               dragPos={dragPos}
               onPointerDown={(e: React.PointerEvent) => handlePointerDown('avrPower', e)}
               label="CONNECT AC"
-              opacity={activeLayer === 'all' || activeLayer === 'power' ? 1 : 0.05}
-              style={{ cursor: mode === 'disassembly' && (connections.pcPower || connections.monitorPower) ? 'not-allowed' : undefined }}
+              opacity={(() => {
+                if (activeLayer !== 'all' && activeLayer !== 'power') return 0.05;
+                if (mode === 'assembly' && !connections.avrPower) {
+                  const othersConnected = connections.keyboard && connections.mouse &&
+                    connections.display && connections.pcPower && connections.monitorPower;
+                  return othersConnected ? 1 : 0.35;
+                }
+                return 1;
+              })()}
+              style={{
+                cursor: (mode === 'assembly' && !connections.avrPower &&
+                  !(connections.keyboard && connections.mouse && connections.display && connections.pcPower && connections.monitorPower))
+                  || (mode === 'disassembly' && (connections.pcPower || connections.monitorPower))
+                  ? 'not-allowed' : undefined
+              }}
             />
             {/* AVR -> PC Power */}
             <DraggableCable
@@ -826,9 +892,24 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
         </div>
       </footer>
 
+      {/* Warning message for ordering constraints */}
+      <AnimatePresence>
+        {warningMessage && (
+          <motion.div
+            key="warning-msg"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-red-950/95 backdrop-blur-xl border border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)] px-6 py-3 rounded-full"
+          >
+            <p className="text-sm text-red-300 font-semibold whitespace-nowrap">{warningMessage}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isComplete && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
@@ -840,19 +921,25 @@ export default function RearPanelView({ mode, onBack, onNext, nextLabel }: { mod
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-white mb-2 tracking-tight">
-                  {mode === 'assembly' ? 'External Setup Complete' : 'Disconnection Complete'}
+                  {mode === 'assembly' ? 'External Setup Complete!' : 'Disconnection Complete'}
                 </h3>
                 <p className="text-sm text-slate-300 leading-relaxed mb-4">
-                  {mode === 'assembly' 
-                    ? 'All foundational data and power links are physically established and verified.' 
+                  {mode === 'assembly'
+                    ? 'All foundational data and power links are physically established and verified.'
                     : 'All cables have been safely disconnected from the rear panel.'}
                 </p>
-                <button 
-                  onClick={onNext || onBack}
-                  className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-medium py-2 px-4 rounded-md transition-colors"
-                >
-                  {nextLabel || 'Return to Menu'}
-                </button>
+                {mode === 'assembly' && countdown !== null ? (
+                  <div className="w-full bg-[#3b82f6]/20 border border-[#3b82f6]/40 text-[#3b82f6] font-medium py-2 px-4 rounded-md text-center">
+                    Proceeding to internal assembly in {countdown}s…
+                  </div>
+                ) : (
+                  <button
+                    onClick={onNext || onBack}
+                    className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-medium py-2 px-4 rounded-md transition-colors"
+                  >
+                    {nextLabel || 'Return to Menu'}
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

@@ -258,12 +258,12 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
 
         <div className="flex-1 flex justify-center items-center px-4 z-20">
           {mode === 'assembly' && installed.hdd && !cables.sata && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-600 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
               Connect the SATA data cable from the HDD to the motherboard!
             </div>
           )}
           {mode === 'assembly' && installed.psu && (!cables.eps || !cables.atx) && (
-            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            <div className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-full text-red-600 text-sm font-semibold animate-pulse text-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
               Connect the 4-pin CPU power and 24-pin ATX power cables from the PSU!
             </div>
           )}
@@ -633,23 +633,23 @@ export default function AssemblyView({ mode, onBack, onNext, nextLabel }: { mode
                       <text x="40" y="100" fill="#94a3b8" fontSize="6" fontFamily="sans-serif" textAnchor="middle">2TB SATA</text>
 
                       {/* SATA Power Port (Wider) */}
-                      <rect 
-                        x="15" y="104" width="26" height="6" 
-                        fill={draggingId === 'cable-sata-power' ? 'rgba(255, 255, 255, 0.2)' : '#0f172a'} 
+                      <rect
+                        x="15" y="104" width="26" height="6"
+                        fill={draggingId === 'cable-sata-power' ? 'rgba(255, 255, 255, 0.2)' : '#0f172a'}
                         stroke={draggingId === 'cable-sata-power' ? '#ffffff' : 'none'}
                         strokeWidth={draggingId === 'cable-sata-power' ? 1 : 0}
-                        rx="0.5" 
+                        rx="0.5"
                       />
                       <path d="M 18 105 L 18 109 M 38 105 L 38 109" stroke="#facc15" strokeWidth="0.5" />
                       <text x="28" y="108" fill="#475569" fontSize="4" fontFamily="sans-serif" textAnchor="middle">PWR</text>
 
                       {/* SATA Data Port (Narrower) */}
-                      <rect 
-                        x="45" y="104" width="18" height="6" 
-                        fill={draggingId === 'cable-sata' ? 'rgba(255, 255, 255, 0.2)' : '#0f172a'} 
+                      <rect
+                        x="45" y="104" width="18" height="6"
+                        fill={draggingId === 'cable-sata' ? 'rgba(255, 255, 255, 0.2)' : '#0f172a'}
                         stroke={draggingId === 'cable-sata' ? '#ffffff' : 'none'}
                         strokeWidth={draggingId === 'cable-sata' ? 1 : 0}
-                        rx="0.5" 
+                        rx="0.5"
                       />
                       <path d="M 48 105 L 48 109 M 60 105 L 60 109" stroke="#facc15" strokeWidth="0.5" />
                       <text x="54" y="108" fill="#475569" fontSize="4" fontFamily="sans-serif" textAnchor="middle">DATA</text>
